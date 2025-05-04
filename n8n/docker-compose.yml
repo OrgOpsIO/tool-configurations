@@ -11,7 +11,7 @@ services:
       - POSTGRES_NON_ROOT_USER=${POSTGRES_NON_ROOT_USER}
       - POSTGRES_NON_ROOT_PASSWORD=${POSTGRES_NON_ROOT_PASSWORD}
     volumes:
-      - ./postgresql/data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./postgresql/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -68,6 +68,7 @@ services:
 
 volumes:
   n8n_data:
+  postgres_data:
 
 networks:
   n8n_internal:
