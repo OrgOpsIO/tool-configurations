@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Traefik und n8n
+# Hauptinstallationsskript für Traefik, n8n und FreeScout
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,12 +16,13 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [traefik|n8n|all]"
+    echo -e "Verwendung: $0 [traefik|n8n|freescout|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  traefik   - Installiert nur Traefik in ~/traefik-compose"
     echo -e "  n8n       - Installiert nur n8n in ~/n8n-compose (erfordert vorherige Traefik-Installation)"
-    echo -e "  all       - Installiert Traefik und n8n"
+    echo -e "  freescout - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige Traefik-Installation)"
+    echo -e "  all       - Installiert Traefik, n8n und FreeScout"
     echo -e "  help      - Zeigt diese Hilfe an"
 }
 
@@ -37,6 +38,12 @@ install_n8n() {
     bash "${SCRIPT_DIR}/n8n/n8n-install.sh"
 }
 
+# Funktion zum Installieren von FreeScout
+install_freescout() {
+    echo -e "${GREEN}Starte FreeScout-Installation...${NC}"
+    bash "${SCRIPT_DIR}/freescout/freescout-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     traefik)
@@ -45,10 +52,14 @@ case "$1" in
     n8n)
         install_n8n
         ;;
+    freescout)
+        install_freescout
+        ;;
     all)
         install_traefik
         sleep 5  # Kurze Pause, damit Traefik vollständig starten kann
         install_n8n
+        install_freescout
         ;;
     help|--help|-h)
         show_help

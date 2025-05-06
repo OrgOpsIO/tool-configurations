@@ -1,0 +1,85 @@
+version: '3'
+
+services:
+  freescout-app:
+    image: tiredofit/freescout
+    container_name: freescout-app
+    depends_on:
+      - freescout-db
+    volumes:
+      - ./data:/data
+      - ./logs:/www/logs
+    environment:
+      - CONTAINER_NAME=freescout-app
+      - DB_HOST=freescout-db
+      - DB_NAME=${FREESCOUT_DB_NAME}
+      - DB_USER=${FREESCOUT_DB_USER}
+      - DB_PASS=${FREESCOUT_DB_PASS}
+      - SITE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
+      - ADMIN_EMAIL=${FREESCOUT_ADMIN_EMAIL}
+      - ADMIN_PASS=${FREESCOUT_ADMIN_PASS}
+      - ENABLE_SSL_PROXY=TRUE
+      - DISPLAY_ERRORS=FALSE
+      - TIMEZONE=${GENERIC_TIMEZONE}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.freescout.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.freescout.tls=true
+      - traefik.http.routers.freescout.entrypoints=web,websecure
+      - traefik.http.routers.freescout.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.freescout.headers.SSLRedirect=true
+      - traefik.http.middlewares.freescout.headers.STSSeconds=315360000
+      - traefik.http.middlewares.freescout.headers.browserXSSFilter=true
+      - traefik.http.middlewares.freescout.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.freescout.headers.forceSTSHeader=true
+      - traefik.http.middlewares.freescout.headers.SSLHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.freescout.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.freescout.headers.STSPreload=true
+      - traefik.http.routers.freescout.middlewares=freescout@docker
+    restart: always
+    networks:
+      - freescout_internal
+      - traefik_network
+
+  freescout-db:
+    image: tiredofit/mariadb
+    container_name: freescout-db
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      - ROOT_PASS=${FREESCOUT_DB_ROOT_PASS}
+      - DB_NAME=${FREESCOUT_DB_NAME}
+      - DB_USER=${FREESCOUT_DB_USER}
+      - DB_PASS=${FREESCOUT_DB_PASS}
+      - CONTAINER_NAME=freescout-db
+    restart: always
+    networks:
+      - freescout_internal
+
+  freescout-db-backup:
+    container_name: freescout-db-backup
+    image: tiredofit/db-backup
+    depends_on:
+      - freescout-db
+    volumes:
+      - ./dbbackup:/backup
+    environment:
+      - CONTAINER_NAME=freescout-db-backup
+      - DB_HOST=freescout-db
+      - DB_TYPE=mariadb
+      - DB_NAME=${FREESCOUT_DB_NAME}
+      - DB_USER=${FREESCOUT_DB_USER}
+      - DB_PASS=${FREESCOUT_DB_PASS}
+      - DB01_BACKUP_INTERVAL=1440
+      - DB01_BACKUP_BEGIN=0000
+      - DB_CLEANUP_TIME=8640
+      - COMPRESSION=BZ
+      - MD5=TRUE
+    restart: always
+    networks:
+      - freescout_internal
+
+networks:
+  freescout_internal:
+  traefik_network:
+    external: true
