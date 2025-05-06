@@ -21,6 +21,8 @@ services:
       - ENABLE_SSL_PROXY=FALSE
       - DISPLAY_ERRORS=FALSE
       - TIMEZONE=${GENERIC_TIMEZONE}
+      - FORCE_HTTPS=true
+      - TRUSTED_PROXIES=*
     healthcheck:
       test: ["CMD-SHELL", "timeout 5 busybox wget -qO- http://127.0.0.1/ > /dev/null 2>&1 || exit 0"]
       interval: 30s
