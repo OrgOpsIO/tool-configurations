@@ -1,11 +1,11 @@
-version: '3'
-
 services:
   freescout-app:
     image: tiredofit/freescout
     container_name: freescout-app
     depends_on:
       - freescout-db
+    ports:
+      - "8080:80"
     volumes:
       - ./data:/data
       - ./logs:/www/logs
@@ -21,8 +21,14 @@ services:
       - ENABLE_SSL_PROXY=FALSE
       - DISPLAY_ERRORS=FALSE
       - TIMEZONE=${GENERIC_TIMEZONE}
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 busybox wget -qO- http://127.0.0.1/ > /dev/null 2>&1 || exit 0"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     labels:
       - traefik.enable=true
+      - traefik.http.services.freescout.loadbalancer.server.port=80
       - traefik.http.routers.freescout.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
       - traefik.http.routers.freescout.tls=true
       - traefik.http.routers.freescout.entrypoints=web,websecure
@@ -38,8 +44,8 @@ services:
       - traefik.http.routers.freescout.middlewares=freescout@docker
     restart: always
     networks:
-      - freescout_internal
       - traefik_network
+      - freescout_internal
 
   freescout-db:
     image: tiredofit/mariadb
