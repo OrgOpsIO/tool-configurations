@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# FreeScout Docker-Compose Installation
+# Nginx Proxy Manager Docker-Compose Installation
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -14,16 +14,9 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Zielverzeichnis im Home-Verzeichnis
-TARGET_DIR=~/freescout-compose
+TARGET_DIR=~/nginx-proxy-manager
 
-echo -e "${GREEN}FreeScout Installation mit Docker Compose wird gestartet...${NC}"
-
-# Prüfen ob das Proxy-Netzwerk existiert
-if ! docker network inspect proxy_network &>/dev/null; then
-    echo -e "${RED}Das Proxy-Netzwerk existiert nicht. Stellen Sie sicher, dass Nginx Proxy Manager installiert ist.${NC}"
-    echo -e "${YELLOW}Führen Sie zuerst './install.sh npm' aus oder installieren Sie den Proxy manuell.${NC}"
-    exit 1
-fi
+echo -e "${GREEN}Nginx Proxy Manager Installation mit Docker Compose wird gestartet...${NC}"
 
 # Überprüfen, ob das Zielverzeichnis existiert, sonst erstellen
 if [ ! -d "$TARGET_DIR" ]; then
@@ -33,6 +26,10 @@ fi
 
 # Ins Zielverzeichnis wechseln
 cd "$TARGET_DIR" || exit 1
+
+# Erstellen des externen Netzwerks, falls es nicht existiert
+echo -e "${YELLOW}Erstelle externes Docker-Netzwerk für Proxy...${NC}"
+docker network create proxy_network 2>/dev/null || true
 
 # Überprüfen, ob die docker-compose.yml existiert, sonst kopieren
 if [ ! -f "docker-compose.yml" ]; then
@@ -52,19 +49,15 @@ fi
 # Verzeichnisse erstellen, falls sie nicht existieren
 echo -e "${YELLOW}Erstelle benötigte Verzeichnisse in $TARGET_DIR${NC}"
 mkdir -p data
-mkdir -p logs
-mkdir -p db
-mkdir -p dbbackup
+mkdir -p letsencrypt
+mkdir -p mysql
 
 # Docker Compose starten
-echo -e "${YELLOW}Starte FreeScout mit Docker Compose in $TARGET_DIR...${NC}"
+echo -e "${YELLOW}Starte Nginx Proxy Manager mit Docker Compose in $TARGET_DIR...${NC}"
 docker compose up -d
 
-# Erfolgsmeldung
-echo -e "${GREEN}FreeScout-Installation abgeschlossen!${NC}"
-if [ -f ".env" ]; then
-    # Laden der Umgebungsvariablen aus .env für die Ausgabe
-    source .env
-    echo -e "${GREEN}Ihre FreeScout-Instanz wird in Kürze unter https://${SUBDOMAIN}.${DOMAIN_NAME} verfügbar sein.${NC}"
-    echo -e "${YELLOW}Wichtig: Stellen Sie sicher, dass Sie einen DNS A-Record für ${SUBDOMAIN}.${DOMAIN_NAME} auf die IP-Adresse Ihres Servers eingerichtet haben.${NC}"
-fi
+echo -e "${GREEN}Nginx Proxy Manager Installation abgeschlossen!${NC}"
+echo -e "${YELLOW}Zugriff auf die Admin-Oberfläche unter: http://$(hostname -I | awk '{print $1}'):81${NC}"
+echo -e "${YELLOW}Standardanmeldedaten: admin@example.com / changeme${NC}"
+echo -e "${YELLOW}Bitte ändern Sie die Anmeldedaten nach dem ersten Login!${NC}"
+echo -e "${YELLOW}Stellen Sie sicher, dass die Ports 80, 443 und 81 in Ihrer Firewall geöffnet sind.${NC}"

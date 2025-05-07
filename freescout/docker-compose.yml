@@ -4,8 +4,6 @@ services:
     container_name: freescout-app
     depends_on:
       - freescout-db
-    ports:
-      - "8080:80"
     volumes:
       - ./data:/data
       - ./logs:/www/logs
@@ -18,36 +16,13 @@ services:
       - SITE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - ADMIN_EMAIL=${FREESCOUT_ADMIN_EMAIL}
       - ADMIN_PASS=${FREESCOUT_ADMIN_PASS}
-      - ENABLE_SSL_PROXY=FALSE
+      - ENABLE_SSL_PROXY=TRUE
       - DISPLAY_ERRORS=FALSE
       - TIMEZONE=${GENERIC_TIMEZONE}
-      - FORCE_HTTPS=true
-      - TRUSTED_PROXIES=*
-    healthcheck:
-      test: ["CMD-SHELL", "timeout 5 busybox wget -qO- http://127.0.0.1/ > /dev/null 2>&1 || exit 0"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    labels:
-      - traefik.enable=true
-      - traefik.http.services.freescout.loadbalancer.server.port=80
-      - traefik.http.routers.freescout.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
-      - traefik.http.routers.freescout.tls=true
-      - traefik.http.routers.freescout.entrypoints=web,websecure
-      - traefik.http.routers.freescout.tls.certresolver=mytlschallenge
-      - traefik.http.middlewares.freescout.headers.SSLRedirect=true
-      - traefik.http.middlewares.freescout.headers.STSSeconds=315360000
-      - traefik.http.middlewares.freescout.headers.browserXSSFilter=true
-      - traefik.http.middlewares.freescout.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.freescout.headers.forceSTSHeader=true
-      - traefik.http.middlewares.freescout.headers.SSLHost=${DOMAIN_NAME}
-      - traefik.http.middlewares.freescout.headers.STSIncludeSubdomains=true
-      - traefik.http.middlewares.freescout.headers.STSPreload=true
-      - traefik.http.routers.freescout.middlewares=freescout@docker
     restart: always
     networks:
-      - traefik_network
-      - freescout_internal
+      - internal
+      - proxy_network
 
   freescout-db:
     image: tiredofit/mariadb
@@ -62,7 +37,7 @@ services:
       - CONTAINER_NAME=freescout-db
     restart: always
     networks:
-      - freescout_internal
+      - internal
 
   freescout-db-backup:
     container_name: freescout-db-backup
@@ -85,9 +60,9 @@ services:
       - MD5=TRUE
     restart: always
     networks:
-      - freescout_internal
+      - internal
 
 networks:
-  freescout_internal:
-  traefik_network:
+  internal:
+  proxy_network:
     external: true

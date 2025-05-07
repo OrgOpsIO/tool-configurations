@@ -18,10 +18,10 @@ TARGET_DIR=~/n8n-compose
 
 echo -e "${GREEN}n8n Installation mit Docker Compose und PostgreSQL wird gestartet...${NC}"
 
-# Prüfen ob das Traefik-Netzwerk existiert
-if ! docker network inspect traefik_network &>/dev/null; then
-    echo -e "${RED}Das Traefik-Netzwerk existiert nicht. Stellen Sie sicher, dass Traefik installiert ist.${NC}"
-    echo -e "${YELLOW}Führen Sie zuerst './install.sh traefik' aus oder installieren Sie Traefik manuell.${NC}"
+# Prüfen ob das Proxy-Netzwerk existiert
+if ! docker network inspect proxy_network &>/dev/null; then
+    echo -e "${RED}Das Proxy-Netzwerk existiert nicht. Stellen Sie sicher, dass Nginx Proxy Manager installiert ist.${NC}"
+    echo -e "${YELLOW}Führen Sie zuerst './install.sh npm' aus oder installieren Sie den Proxy manuell.${NC}"
     exit 1
 fi
 
@@ -45,7 +45,7 @@ fi
 # Überprüfen, ob die .env existiert, sonst example.env kopieren
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Kopiere example.env nach $TARGET_DIR/.env${NC}"
-    cp "$SCRIPT_DIR/example.env" ./.env
+    cp "$SCRIPT_DIR/.env" ./.env
     echo -e "${YELLOW}Bitte passen Sie die .env Datei in $TARGET_DIR an Ihre Bedürfnisse an.${NC}"
 fi
 

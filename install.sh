@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Traefik, n8n und FreeScout
+# Hauptinstallationsskript für Nginx Proxy Manager, n8n und FreeScout
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,20 +16,20 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [traefik|n8n|freescout|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|all]"
     echo -e ""
     echo -e "Optionen:"
-    echo -e "  traefik   - Installiert nur Traefik in ~/traefik-compose"
-    echo -e "  n8n       - Installiert nur n8n in ~/n8n-compose (erfordert vorherige Traefik-Installation)"
-    echo -e "  freescout - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige Traefik-Installation)"
-    echo -e "  all       - Installiert Traefik, n8n und FreeScout"
+    echo -e "  npm       - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
+    echo -e "  n8n       - Installiert nur n8n in ~/n8n-compose (erfordert vorherige npm-Installation)"
+    echo -e "  freescout - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
+    echo -e "  all       - Installiert Nginx Proxy Manager, n8n und FreeScout"
     echo -e "  help      - Zeigt diese Hilfe an"
 }
 
-# Funktion zum Installieren von Traefik
-install_traefik() {
-    echo -e "${GREEN}Starte Traefik-Installation...${NC}"
-    bash "${SCRIPT_DIR}/traefik/traefik-install.sh"
+# Funktion zum Installieren von Nginx Proxy Manager
+install_npm() {
+    echo -e "${GREEN}Starte Nginx Proxy Manager Installation...${NC}"
+    bash "${SCRIPT_DIR}/nginx-proxy-manager/npm-install.sh"
 }
 
 # Funktion zum Installieren von n8n
@@ -46,8 +46,8 @@ install_freescout() {
 
 # Hauptlogik
 case "$1" in
-    traefik)
-        install_traefik
+    npm)
+        install_npm
         ;;
     n8n)
         install_n8n
@@ -56,8 +56,8 @@ case "$1" in
         install_freescout
         ;;
     all)
-        install_traefik
-        sleep 5  # Kurze Pause, damit Traefik vollständig starten kann
+        install_npm
+        sleep 10  # Längere Pause, damit NPM vollständig starten kann
         install_n8n
         install_freescout
         ;;
