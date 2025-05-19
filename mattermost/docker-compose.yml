@@ -1,0 +1,53 @@
+services:
+  mattermost-db:
+    image: postgres:13-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${MM_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${MM_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${MM_POSTGRES_DB}
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MM_POSTGRES_USER} -d ${MM_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mattermost_internal
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    restart: always
+    depends_on:
+      mattermost-db:
+        condition: service_healthy
+    environment:
+      - MM_USERNAME=${MM_POSTGRES_USER}
+      - MM_PASSWORD=${MM_POSTGRES_PASSWORD}
+      - MM_DBNAME=${MM_POSTGRES_DB}
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://${MM_POSTGRES_USER}:${MM_POSTGRES_PASSWORD}@mattermost-db:5432/${MM_POSTGRES_DB}?sslmode=disable&connect_timeout=10
+      - MM_SERVICESETTINGS_SITEURL=https://${SUBDOMAIN}.${DOMAIN_NAME}
+      - MM_SERVICESETTINGS_ENABLECUSTOMEMOJI=true
+      - MM_SERVICESETTINGS_ENABLELINKPREVIEWS=true
+      - MM_PLUGINSETTINGS_ENABLE=true
+      - MM_PLUGINSETTINGS_ENABLEUPLOADS=true
+      - MM_BLEVESETTINGS_INDEXDIR=/mattermost/bleve-indexes
+      - MM_EMAILSETTINGS_SENDEMAILS=false
+      - MM_LOGSETTINGS_CONSOLELEVEL=INFO
+    volumes:
+      - ./mattermost/config:/mattermost/config
+      - ./mattermost/data:/mattermost/data
+      - ./mattermost/logs:/mattermost/logs
+      - ./mattermost/plugins:/mattermost/plugins
+      - ./mattermost/client-plugins:/mattermost/client/plugins
+      - ./mattermost/bleve-indexes:/mattermost/bleve-indexes
+    networks:
+      - mattermost_internal
+      - proxy_network
+
+networks:
+  mattermost_internal:
+  proxy_network:
+    external: true

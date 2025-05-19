@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Nginx Proxy Manager, n8n und FreeScout
+# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout und Mattermost
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,14 +16,15 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|all]"
     echo -e ""
     echo -e "Optionen:"
-    echo -e "  npm       - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
-    echo -e "  n8n       - Installiert nur n8n in ~/n8n-compose (erfordert vorherige npm-Installation)"
-    echo -e "  freescout - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
-    echo -e "  all       - Installiert Nginx Proxy Manager, n8n und FreeScout"
-    echo -e "  help      - Zeigt diese Hilfe an"
+    echo -e "  npm        - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
+    echo -e "  n8n        - Installiert nur n8n in ~/n8n-compose (erfordert vorherige npm-Installation)"
+    echo -e "  freescout  - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
+    echo -e "  mattermost - Installiert nur Mattermost in ~/mattermost-compose (erfordert vorherige npm-Installation)"
+    echo -e "  all        - Installiert Nginx Proxy Manager, n8n, FreeScout und Mattermost"
+    echo -e "  help       - Zeigt diese Hilfe an"
 }
 
 # Funktion zum Installieren von Nginx Proxy Manager
@@ -44,6 +45,12 @@ install_freescout() {
     bash "${SCRIPT_DIR}/freescout/freescout-install.sh"
 }
 
+# Funktion zum Installieren von Mattermost
+install_mattermost() {
+    echo -e "${GREEN}Starte Mattermost-Installation...${NC}"
+    bash "${SCRIPT_DIR}/mattermost/mattermost-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -55,11 +62,15 @@ case "$1" in
     freescout)
         install_freescout
         ;;
+    mattermost)
+        install_mattermost
+        ;;
     all)
         install_npm
         sleep 10  # Längere Pause, damit NPM vollständig starten kann
         install_n8n
         install_freescout
+        install_mattermost
         ;;
     help|--help|-h)
         show_help
