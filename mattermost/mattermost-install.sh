@@ -49,32 +49,9 @@ if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Bitte passen Sie die .env Datei in $TARGET_DIR an Ihre Bedürfnisse an.${NC}"
 fi
 
-# Verzeichnisse erstellen, falls sie nicht existieren
-echo -e "${YELLOW}Erstelle benötigte Verzeichnisse in $TARGET_DIR${NC}"
-mkdir -p postgres/data
-mkdir -p mattermost/config
-mkdir -p mattermost/data
-mkdir -p mattermost/logs
-mkdir -p mattermost/plugins
-mkdir -p mattermost/client-plugins
-mkdir -p mattermost/bleve-indexes
-
-# Berechtigungen setzen (kritisch für Mattermost)
-echo -e "${YELLOW}Setze korrekte Berechtigungen für Mattermost-Verzeichnisse...${NC}"
-# Get current user UID and GID
-CURRENT_UID=$(id -u)
-CURRENT_GID=$(id -g)
-
-# Set permissions for all mattermost directories
-chmod -R 775 mattermost/
-chown -R $CURRENT_UID:$CURRENT_GID mattermost/
-
-# Create a default config.json to avoid permission issues
-if [ ! -f "mattermost/config/config.json" ]; then
-    echo -e "${YELLOW}Erstelle eine initiale config.json Datei...${NC}"
-    echo '{}' > mattermost/config/config.json
-    chmod 664 mattermost/config/config.json
-fi
+# Nur das Verzeichnis für Benutzer-Uploads erstellen
+echo -e "${YELLOW}Erstelle Verzeichnis für Benutzer-Uploads...${NC}"
+mkdir -p data
 
 # Docker Compose starten
 echo -e "${YELLOW}Starte Mattermost mit Docker Compose in $TARGET_DIR...${NC}"
