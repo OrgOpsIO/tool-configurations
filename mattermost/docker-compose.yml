@@ -36,13 +36,15 @@ services:
       - MM_BLEVESETTINGS_INDEXDIR=/mattermost/bleve-indexes
       - MM_EMAILSETTINGS_SENDEMAILS=false
       - MM_LOGSETTINGS_CONSOLELEVEL=INFO
+      - PUID=1000
+      - PGID=1000
     volumes:
-      - ./mattermost/config:/mattermost/config
-      - ./mattermost/data:/mattermost/data
-      - ./mattermost/logs:/mattermost/logs
-      - ./mattermost/plugins:/mattermost/plugins
-      - ./mattermost/client-plugins:/mattermost/client/plugins
-      - ./mattermost/bleve-indexes:/mattermost/bleve-indexes
+      - ./mattermost/config:/mattermost/config:rw
+      - ./mattermost/data:/mattermost/data:rw
+      - ./mattermost/logs:/mattermost/logs:rw
+      - ./mattermost/plugins:/mattermost/plugins:rw
+      - ./mattermost/client-plugins:/mattermost/client/plugins:rw
+      - ./mattermost/bleve-indexes:/mattermost/bleve-indexes:rw
     networks:
       - mattermost_internal
       - proxy_network

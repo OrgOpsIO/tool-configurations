@@ -59,6 +59,23 @@ mkdir -p mattermost/plugins
 mkdir -p mattermost/client-plugins
 mkdir -p mattermost/bleve-indexes
 
+# Berechtigungen setzen (kritisch für Mattermost)
+echo -e "${YELLOW}Setze korrekte Berechtigungen für Mattermost-Verzeichnisse...${NC}"
+# Get current user UID and GID
+CURRENT_UID=$(id -u)
+CURRENT_GID=$(id -g)
+
+# Set permissions for all mattermost directories
+chmod -R 775 mattermost/
+chown -R $CURRENT_UID:$CURRENT_GID mattermost/
+
+# Create a default config.json to avoid permission issues
+if [ ! -f "mattermost/config/config.json" ]; then
+    echo -e "${YELLOW}Erstelle eine initiale config.json Datei...${NC}"
+    echo '{}' > mattermost/config/config.json
+    chmod 664 mattermost/config/config.json
+fi
+
 # Docker Compose starten
 echo -e "${YELLOW}Starte Mattermost mit Docker Compose in $TARGET_DIR...${NC}"
 docker compose up -d
