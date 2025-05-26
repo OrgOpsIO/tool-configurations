@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout und Mattermost
+# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout, Mattermost und Ghost
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,14 +16,15 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
     echo -e "  n8n        - Installiert nur n8n in ~/n8n-compose (erfordert vorherige npm-Installation)"
     echo -e "  freescout  - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
     echo -e "  mattermost - Installiert nur Mattermost in ~/mattermost-compose (erfordert vorherige npm-Installation)"
-    echo -e "  all        - Installiert Nginx Proxy Manager, n8n, FreeScout und Mattermost"
+    echo -e "  ghost      - Installiert nur Ghost CMS in ~/ghost-compose (erfordert vorherige npm-Installation)"
+    echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
 
@@ -51,6 +52,12 @@ install_mattermost() {
     bash "${SCRIPT_DIR}/mattermost/mattermost-install.sh"
 }
 
+# Funktion zum Installieren von Ghost
+install_ghost() {
+    echo -e "${GREEN}Starte Ghost CMS Installation...${NC}"
+    bash "${SCRIPT_DIR}/ghost/ghost-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -65,12 +72,16 @@ case "$1" in
     mattermost)
         install_mattermost
         ;;
+    ghost)
+        install_ghost
+        ;;
     all)
         install_npm
         sleep 10  # Längere Pause, damit NPM vollständig starten kann
         install_n8n
         install_freescout
         install_mattermost
+        install_ghost
         ;;
     help|--help|-h)
         show_help

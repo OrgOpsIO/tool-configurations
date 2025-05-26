@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+  ghost-db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${GHOST_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${GHOST_DB_NAME}
+      - MYSQL_USER=${GHOST_DB_USER}
+      - MYSQL_PASSWORD=${GHOST_DB_PASSWORD}
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ghost_internal
+
+  ghost:
+    image: ghost:5-alpine
+    restart: always
+    container_name: ghost
+    depends_on:
+      ghost-db:
+        condition: service_healthy
+    environment:
+      - database__client=mysql
+      - database__connection__host=ghost-db
+      - database__connection__user=${GHOST_DB_USER}
+      - database__connection__password=${GHOST_DB_PASSWORD}
+      - database__connection__database=${GHOST_DB_NAME}
+      - url=https://${SUBDOMAIN}.${DOMAIN_NAME}
+      - NODE_ENV=production
+    volumes:
+      - ghost_content:/var/lib/ghost/content
+      - ./content/images:/var/lib/ghost/content/images
+      - ./content/files:/var/lib/ghost/content/files
+    networks:
+      - ghost_internal
+      - proxy_network
+
+volumes:
+  ghost_content:
+
+networks:
+  ghost_internal:
+  proxy_network:
+    external: true
