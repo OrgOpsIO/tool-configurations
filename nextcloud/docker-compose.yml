@@ -1,0 +1,74 @@
+services:
+  nextcloud-db:
+    image: mariadb:10.11
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${NEXTCLOUD_DB_NAME}
+      - MYSQL_USER=${NEXTCLOUD_DB_USER}
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+    volumes:
+      - ./mariadb/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nextcloud_internal
+
+  nextcloud-redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - nextcloud_internal
+
+  nextcloud:
+    image: nextcloud:28-apache
+    restart: always
+    container_name: nextcloud
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+    environment:
+      # Database configuration
+      - MYSQL_HOST=nextcloud-db
+      - MYSQL_DATABASE=${NEXTCLOUD_DB_NAME}
+      - MYSQL_USER=${NEXTCLOUD_DB_USER}
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+
+      # Nextcloud configuration
+      - NEXTCLOUD_TRUSTED_DOMAINS=${SUBDOMAIN}.${DOMAIN_NAME}
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - OVERWRITECLIURL=https://${SUBDOMAIN}.${DOMAIN_NAME}
+
+      # Redis configuration
+      - REDIS_HOST=nextcloud-redis
+      - REDIS_HOST_PASSWORD=${NEXTCLOUD_REDIS_PASSWORD}
+
+      # Admin user (only for initial setup)
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+
+      # Performance settings
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_UPLOAD_LIMIT=16G
+
+    volumes:
+      - ./nextcloud/html:/var/www/html
+      - ./nextcloud/data:/var/www/html/data
+      - ./nextcloud/config:/var/www/html/config
+      - ./nextcloud/apps:/var/www/html/custom_apps
+      - ./nextcloud/themes:/var/www/html/themes
+    networks:
+      - nextcloud_internal
+      - proxy_network
+
+networks:
+  nextcloud_internal:
+  proxy_network:
+    external: true

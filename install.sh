@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout, Mattermost und Ghost
+# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout, Mattermost, Ghost und Nextcloud
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
@@ -24,6 +24,7 @@ show_help() {
     echo -e "  freescout  - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
     echo -e "  mattermost - Installiert nur Mattermost in ~/mattermost-compose (erfordert vorherige npm-Installation)"
     echo -e "  ghost      - Installiert nur Ghost CMS in ~/ghost-compose (erfordert vorherige npm-Installation)"
+    echo -e "  nextcloud  - Installiert nur Nextcloud in ~/nextcloud-compose (erfordert vorherige npm-Installation)"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -58,6 +59,12 @@ install_ghost() {
     bash "${SCRIPT_DIR}/ghost/ghost-install.sh"
 }
 
+# Funktion zum Installieren von Nextcloud
+install_nextcloud() {
+    echo -e "${GREEN}Starte Nextcloud-Installation...${NC}"
+    bash "${SCRIPT_DIR}/nextcloud/nextcloud-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -75,6 +82,9 @@ case "$1" in
     ghost)
         install_ghost
         ;;
+    nextcloud)
+        install_nextcloud
+        ;;
     all)
         install_npm
         sleep 10  # Längere Pause, damit NPM vollständig starten kann
@@ -82,6 +92,7 @@ case "$1" in
         install_freescout
         install_mattermost
         install_ghost
+        install_nextcloud
         ;;
     help|--help|-h)
         show_help
