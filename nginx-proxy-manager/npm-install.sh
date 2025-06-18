@@ -42,7 +42,7 @@ fi
 # Überprüfen, ob die .env existiert, sonst example.env kopieren
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Kopiere example.env nach $TARGET_DIR/.env${NC}"
-    cp "$SCRIPT_DIR/example.env" ./.env
+    cp "$SCRIPT_DIR/.env" ./.env
     echo -e "${YELLOW}Bitte passen Sie die .env Datei in $TARGET_DIR an Ihre Bedürfnisse an.${NC}"
 fi
 

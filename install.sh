@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---------------------------------------------
-# Hauptinstallationsskript für Nginx Proxy Manager, n8n, FreeScout, Mattermost, Ghost und Nextcloud
+# Hauptinstallationsskript für alle Services
 # ---------------------------------------------
 
 # Farben für die Ausgabe
@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
@@ -25,6 +25,7 @@ show_help() {
     echo -e "  mattermost - Installiert nur Mattermost in ~/mattermost-compose (erfordert vorherige npm-Installation)"
     echo -e "  ghost      - Installiert nur Ghost CMS in ~/ghost-compose (erfordert vorherige npm-Installation)"
     echo -e "  nextcloud  - Installiert nur Nextcloud in ~/nextcloud-compose (erfordert vorherige npm-Installation)"
+    echo -e "  minio      - Installiert nur MinIO in ~/minio-compose (erfordert vorherige npm-Installation)"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -65,6 +66,12 @@ install_nextcloud() {
     bash "${SCRIPT_DIR}/nextcloud/nextcloud-install.sh"
 }
 
+# Funktion zum Installieren von MinIO
+install_minio() {
+    echo -e "${GREEN}Starte MinIO-Installation...${NC}"
+    bash "${SCRIPT_DIR}/minio/minio-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -85,6 +92,9 @@ case "$1" in
     nextcloud)
         install_nextcloud
         ;;
+    minio)
+        install_minio
+        ;;
     all)
         install_npm
         sleep 10  # Längere Pause, damit NPM vollständig starten kann
@@ -93,6 +103,7 @@ case "$1" in
         install_mattermost
         install_ghost
         install_nextcloud
+        install_minio
         ;;
     help|--help|-h)
         show_help
