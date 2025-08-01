@@ -16,16 +16,18 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|all]"
     echo -e ""
     echo -e "Optionen:"
-    echo -e "  npm        - Installiert nur Nginx Proxy Manager in ~/nginx-proxy-manager"
-    echo -e "  n8n        - Installiert nur n8n in ~/n8n-compose (erfordert vorherige npm-Installation)"
-    echo -e "  freescout  - Installiert nur FreeScout in ~/freescout-compose (erfordert vorherige npm-Installation)"
-    echo -e "  mattermost - Installiert nur Mattermost in ~/mattermost-compose (erfordert vorherige npm-Installation)"
-    echo -e "  ghost      - Installiert nur Ghost CMS in ~/ghost-compose (erfordert vorherige npm-Installation)"
-    echo -e "  nextcloud  - Installiert nur Nextcloud in ~/nextcloud-compose (erfordert vorherige npm-Installation)"
-    echo -e "  minio      - Installiert nur MinIO in ~/minio-compose (erfordert vorherige npm-Installation)"
+    echo -e "  npm        - Installiert nur Nginx Proxy Manager"
+    echo -e "  n8n        - Installiert nur n8n"
+    echo -e "  freescout  - Installiert nur FreeScout"
+    echo -e "  mattermost - Installiert nur Mattermost"
+    echo -e "  ghost      - Installiert nur Ghost CMS"
+    echo -e "  nextcloud  - Installiert nur Nextcloud"
+    echo -e "  minio      - Installiert nur MinIO"
+    echo -e "  tiledesk   - Installiert nur TileDesk"
+    echo -e "  nocodb     - Installiert nur NocoDB"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -72,6 +74,12 @@ install_minio() {
     bash "${SCRIPT_DIR}/minio/minio-install.sh"
 }
 
+# Funktion zum Installieren von NocoDB
+install_nocodb() {
+    echo -e "${GREEN}Starte NocoDB-Installation...${NC}"
+    bash "${SCRIPT_DIR}/nocodb/nocodb-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -95,15 +103,19 @@ case "$1" in
     minio)
         install_minio
         ;;
+    nocodb)
+        install_nocodb
+        ;;
     all)
         install_npm
-        sleep 10  # Längere Pause, damit NPM vollständig starten kann
+        sleep 10
         install_n8n
         install_freescout
         install_mattermost
         install_ghost
         install_nextcloud
         install_minio
+        install_nocodb
         ;;
     help|--help|-h)
         show_help
