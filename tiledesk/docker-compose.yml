@@ -1,0 +1,305 @@
+version: "3.7"
+
+services:
+  # Database Layer
+  mongo:
+    container_name: tiledesk-mongo
+    image: mongo:7.0.2
+    restart: always
+    command: --bind_ip_all
+    volumes:
+      - ./mongodb/data:/data/db
+    networks:
+      - tiledesk_internal
+
+  redis:
+    container_name: tiledesk-redis
+    image: redis:7.0.5
+    restart: always
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - tiledesk_internal
+
+  rabbitmq:
+    image: chat21/chat21-rabbitmq
+    container_name: tiledesk-rabbitmq
+    restart: always
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_ERLANG_COOKIE}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - ./rabbitmq/data:/var/lib/rabbitmq
+    networks:
+      - tiledesk_internal
+      - proxy_network  # For MQTT WebSocket access
+
+  # Backend Services
+  server:
+    image: tiledesk/tiledesk-server:2.10.75
+    container_name: tiledesk-server
+    restart: always
+    environment:
+      - LOG_LEVEL=info
+      - CHAT21_ENABLED=true
+      - CHAT21_ENGINE=mqtt
+      - CHAT21_URL=http://chat21httpserver:8004
+      - CHAT21_JWT_SECRET=${JWT_SECRET}
+      - CHAT21_APPID=tilechat
+      - CHAT21_ADMIN_TOKEN=${CHAT21_ADMIN_TOKEN}
+      - RESTHOOK_ENABLED=true
+      - ALLOW_REOPEN_CHAT=true
+      - AMQP_MANAGER_URL=${AMQP_MANAGER_URL}
+      - MONGODB_URI=mongodb://mongo/tiledesk
+      - EMAIL_ENABLED=${EMAIL_ENABLED}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_SECURE=${EMAIL_SECURE}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS}
+      - EMAIL_BASEURL=https://${SUBDOMAIN}.${DOMAIN_NAME}/dashboard
+      - WEBHOOK_ORIGIN=https://${SUBDOMAIN}.${DOMAIN_NAME}/api/
+      - WIDGET_LOCATION=https://${SUBDOMAIN}.${DOMAIN_NAME}/widget/
+      - LICENSE_KEY=${LICENSE_KEY}
+      - CACHE_ENABLED=true
+      - CACHE_ENGINE=redis
+      - CACHE_REDIS_HOST=redis
+      - CACHE_REDIS_PORT=6379
+      - APPS_ACCESS_TOKEN_SECRET=${APPS_ACCESS_TOKEN_SECRET}
+      - BOOT_LOADING=true
+      - META_GRAPH_URL=https://graph.facebook.com/v14.0/
+      - WHATSAPP_LOG=false
+      - TELEGRAM_API_URL=https://api.telegram.org/bot
+      - TELEGRAM_FILE_URL=https://api.telegram.org/file/bot
+      - TELEGRAM_LOG=info
+      - FB_APP_ID=${FB_APP_ID}
+      - FB_APP_SECRET=${FB_APP_SECRET}
+      - BASE_FILE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/api/
+      - GPTKEY=${OPENAI_API_KEY}
+      - OPENAI_ENDPOINT=https://api.openai.com/v1
+      - QUOTES_ENABLED=false
+      - TILEBOT_ENDPOINT=http://chatbot:3000
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - tiledesk_internal
+      - proxy_network
+
+  chatbot:
+    image: tiledesk/tiledesk-chatbot:2.0.7
+    container_name: tiledesk-chatbot
+    restart: always
+    environment:
+      - API_ENDPOINT=http://server:3000
+      - TILEBOT_ENDPOINT=http://chatbot:3000
+      - API_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/api
+      - MONGODB_URI=mongodb://mongo/tiledesk
+      - CACHE_ENABLED=true
+      - CACHE_REDIS_HOST=redis
+      - CACHE_REDIS_PORT=6379
+      - TILEBOT_LOG=info
+      - AI_ENDPOINT=http://ai:8000/api
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - tiledesk_internal
+
+  chat21httpserver:
+    image: chat21/chat21-http-server:0.2.37
+    container_name: tiledesk-chat21httpserver
+    restart: always
+    environment:
+      - LOG_LEVEL=info
+      - MONGODB_URI=mongodb://mongo/chat21
+      - JWT_KEY=${JWT_SECRET}
+      - RABBITMQ_URI=${CHAT21_RABBITMQ_URI}
+      - PUSH_ENABLED=true
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_APIKEY=${FIREBASE_APIKEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - PUSH_WH_CHAT21_API_ADMIN_TOKEN=${PUSH_WH_CHAT21_API_ADMIN_TOKEN}
+      - PUSH_WH_NOTIFY_URL=http://chat21httpserver:8004/api/tilechat/notify
+      - PUSH_WH_WEBHOOK_TOKEN=${PUSH_WH_WEBHOOK_TOKEN}
+      - CHAT21HTTP_CACHE_ENABLED=false
+      - CONTACTS_LOOKUP_ENDPOINT=http://server:3000/users_util
+    depends_on:
+      - mongo
+      - rabbitmq
+    networks:
+      - tiledesk_internal
+      - proxy_network
+
+  chat21server:
+    image: chat21/chat21-server:0.2.53
+    container_name: tiledesk-chat21server
+    restart: always
+    environment:
+      - LOG_LEVEL=info
+      - MONGODB_URI=mongodb://mongo/chat21
+      - APP_ID=tilechat
+      - WEBHOOK_ENDPOINTS=http://server:3000/chat21/requests,http://chat21httpserver:8004/api/tilechat/push/webhook/endpoint/${PUSH_WH_WEBHOOK_TOKEN}
+      - WEBHOOK_ENABLED=true
+      - WEBHOOK_EVENTS=message-sent,message-delivered,conversation-unarchived
+      - RABBITMQ_URI=${CHAT21_RABBITMQ_URI}
+    depends_on:
+      - mongo
+      - rabbitmq
+      - server
+    networks:
+      - tiledesk_internal
+
+  ai:
+    image: tiledesk/tiledeskai-lite:0.1.0
+    container_name: tiledesk-ai
+    restart: always
+    environment:
+      - WORKERS=3
+      - TIMEOUT=180
+      - MAXREQUESTS=1200
+      - MAXRJITTER=5
+      - GRACEFULTIMEOUT=30
+    networks:
+      - tiledesk_internal
+
+  # Frontend Services
+  dashboard:
+    image: tiledesk/tiledesk-dashboard:2.7.93
+    container_name: tiledesk-dashboard
+    restart: always
+    environment:
+      - FEATURES_TOKEN=${FEATURES_TOKEN}
+      - BOT_CREDENTIAL_URL=/api/modules/dialogflow/botcredendials/
+      - RASA_BOT_CREDENTIAL_URL=/api/modules/rasa/botcredendials/
+      - WIDGET_LOCATION=https://${SUBDOMAIN}.${DOMAIN_NAME}/widget/
+      - SERVER_BASE_URL=/api/
+      - CHAT_BASE_URL=/chat/
+      - CDS_BASE_URL=/cds/
+      - WS_URL_RELATIVE=/ws/
+      - BRAND_SRC=${BRAND_SRC}
+      - REMOTE_JS_SRC=${REMOTE_JS_SRC}
+      - CHAT21_ENGINE=mqtt
+      - UPLOAD_ENGINE=native
+      - PUSH_ENGINE=none
+      - LOG_LEVEL=info
+      - APPS_URL=/api/modules/apps/
+      - PROMO_BANNER_URL=${PROMO_BANNER_URL}
+      - FIREBASE_APIKEY=${FIREBASE_APIKEY}
+      - FIREBASE_AUTHDOMAIN=${FIREBASE_AUTHDOMAIN}
+      - FIREBASE_DATABASEURL=${FIREBASE_DATABASEURL}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGEBUCKET=${FIREBASE_STORAGEBUCKET}
+      - FIREBASE_MESSAGINGSENDERID=${FIREBASE_MESSAGINGSENDERID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_VAPID=${FIREBASE_VAPID}
+      - API_BASEIMAGE_URL=/api/
+      - COMMUNITY_TEMPLATES_URL=/api/modules/templates/public/community
+      - TEMPLATES_URL=/api/modules/templates/public/templates
+      - FILE_UPLOAD_ACCEPT=*/*
+    networks:
+      - proxy_network
+
+  cds:
+    image: tiledesk/design-studio:1.30.4
+    container_name: tiledesk-cds
+    restart: always
+    environment:
+      - FEATURES_TOKEN=${FEATURES_TOKEN}
+      - WIDGET_LOCATION=https://${SUBDOMAIN}.${DOMAIN_NAME}/widget/
+      - SERVER_BASE_URL=/api/
+      - DASHBOARD_URL=/dashboard/
+      - WS_URL_RELATIVE=/ws/
+      - BRAND_SRC=${BRAND_SRC}
+      - REMOTE_JS_SRC=${REMOTE_JS_SRC}
+      - UPLOAD_ENGINE=native
+      - LOG_LEVEL=info
+      - FIREBASE_APIKEY=${FIREBASE_APIKEY}
+      - FIREBASE_AUTHDOMAIN=${FIREBASE_AUTHDOMAIN}
+      - FIREBASE_DATABASEURL=${FIREBASE_DATABASEURL}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGEBUCKET=${FIREBASE_STORAGEBUCKET}
+      - FIREBASE_MESSAGINGSENDERID=${FIREBASE_MESSAGINGSENDERID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_VAPID=${FIREBASE_VAPID}
+      - CDS_STORAGE_PREFIX=cds_sv5
+      - API_BASEIMAGE_URL=/api/
+      - FILE_UPLOAD_ACCEPT=*/*
+      - AI_MODELS=${AI_MODELS}
+    networks:
+      - proxy_network
+
+  webwidget:
+    image: chat21/chat21-web-widget:5.0.93
+    container_name: tiledesk-webwidget
+    restart: always
+    environment:
+      - CHAT21_ENGINE=mqtt
+      - MQTT_APPID=tilechat
+      - PUSH_ENGINE=none
+      - LOG_LEVEL=info
+      - MQTT_ENDPOINT=wss://${SUBDOMAIN}.${DOMAIN_NAME}/mqws/ws
+      - MQTT_APIENDPOINT=https://${SUBDOMAIN}.${DOMAIN_NAME}/chatapi/api
+      - FIREBASE_APIKEY=${FIREBASE_APIKEY}
+      - FIREBASE_AUTHDOMAIN=${FIREBASE_AUTHDOMAIN}
+      - FIREBASE_DATABASEURL=${FIREBASE_DATABASEURL}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGEBUCKET=${FIREBASE_STORAGEBUCKET}
+      - FIREBASE_MESSAGINGSENDERID=${FIREBASE_MESSAGINGSENDERID}
+      - FIREBASE_TENANT=tilechat
+      - UPLOAD_ENGINE=native
+      - SERVER_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/api/
+      - TRANSLATIONS_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/api/
+      - API_BASEIMAGE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/api/
+      - DASHBOARD_URL=/dashboard/
+      - AUTH_PERSISTENCE=LOCAL
+      - ENBED_JS=true
+      - FILE_UPLOAD_ACCEPT=*/*
+    networks:
+      - proxy_network
+
+  ionic:
+    image: chat21/chat21-ionic:3.4.13
+    container_name: tiledesk-ionic
+    restart: always
+    environment:
+      - DASHBOARD_URL=/dashboard/
+      - API_BASEIMAGE_URL=/api/
+      - SERVER_BASE_URL=/api/
+      - FEATURES_TOKEN=${FEATURES_TOKEN}
+      - WIDGET_LOCATION=/widget/
+      - PUSH_ENGINE=none
+      - LOG_LEVEL=info
+      - FILE_UPLOAD_ACCEPT=*/*
+      - CHAT21_ENGINE=mqtt
+      - MQTT_APPID=tilechat
+      - MQTT_ENDPOINT=wss://${SUBDOMAIN}.${DOMAIN_NAME}/mqws/ws
+      - MQTT_APIENDPOINT=/chatapi/api
+      - UPLOAD_ENGINE=native
+      - FIREBASE_APIKEY=${FIREBASE_APIKEY}
+      - FIREBASE_AUTHDOMAIN=${FIREBASE_AUTHDOMAIN}
+      - FIREBASE_DATABASEURL=${FIREBASE_DATABASEURL}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGEBUCKET=${FIREBASE_STORAGEBUCKET}
+      - FIREBASE_MESSAGINGSENDERID=${FIREBASE_MESSAGINGSENDERID}
+      - FIREBASE_TENANT=tilechat
+      - FIREBASE_VAPID=${FIREBASE_VAPID}
+      - SUPPORT_MODE=true
+      - WRITE_TO_BUTTON=true
+      - ARCHIVED_BUTTON=true
+      - AUTH_PERSISTENCE=LOCAL
+      - EMAIL_SECTION=true
+      - CHAT_STORAGE_PREFIX=chat_sv5
+      - WS_URL_RELATIVE=/ws/
+    networks:
+      - proxy_network
+
+networks:
+  tiledesk_internal:
+  proxy_network:
+    external: true

@@ -74,6 +74,12 @@ install_minio() {
     bash "${SCRIPT_DIR}/minio/minio-install.sh"
 }
 
+# Funktion zum Installieren von TileDesk
+install_tiledesk() {
+    echo -e "${GREEN}Starte TileDesk-Installation...${NC}"
+    bash "${SCRIPT_DIR}/tiledesk/tiledesk-install.sh"
+}
+
 # Funktion zum Installieren von NocoDB
 install_nocodb() {
     echo -e "${GREEN}Starte NocoDB-Installation...${NC}"
@@ -103,6 +109,9 @@ case "$1" in
     minio)
         install_minio
         ;;
+    tiledesk)
+        install_tiledesk
+        ;;
     nocodb)
         install_nocodb
         ;;
@@ -115,6 +124,7 @@ case "$1" in
         install_ghost
         install_nextcloud
         install_minio
+        install_tiledesk
         install_nocodb
         ;;
     help|--help|-h)
