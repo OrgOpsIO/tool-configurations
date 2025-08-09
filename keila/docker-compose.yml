@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  keila-db:
+    image: postgres:16.6
+    container_name: keila-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - keila_internal
+
+  keila:
+    image: pentacent/keila:0.17
+    container_name: keila
+    restart: always
+    depends_on:
+      keila-db:
+        condition: service_healthy
+    environment:
+      # Database Configuration (Mandatory)
+      - DB_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@keila-db:5432/${POSTGRES_DB}
+      - DB_ENABLE_SSL=false
+
+      # Root User Configuration
+      - KEILA_USER=${KEILA_ROOT_EMAIL}
+      - KEILA_PASSWORD=${KEILA_ROOT_PASSWORD}
+
+      # URL Configuration (Mandatory)
+      - URL_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - URL_PATH=/
+      - URL_SCHEMA=https
+      - URL_PORT=443
+
+      # Deployment Configuration (Mandatory)
+      - PORT=4000
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - HASHID_SALT=${HASHID_SALT}
+      - DISABLE_REGISTRATION=${DISABLE_REGISTRATION}
+      - DISABLE_PRECEDENCE_HEADER=${DISABLE_PRECEDENCE_HEADER}
+      - USER_CONTENT_DIR=/uploads
+      - USER_CONTENT_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/uploads
+      - LOG_LEVEL=${LOG_LEVEL}
+
+      # System Mailer Configuration (Mandatory)
+      - MAILER_TYPE=smtp
+      - MAILER_SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+      - MAILER_SMTP_HOST=${SMTP_HOST}
+      - MAILER_SMTP_PORT=${SMTP_PORT}
+      - MAILER_SMTP_USER=${SMTP_USER}
+      - MAILER_SMTP_PASSWORD=${SMTP_PASSWORD}
+      - MAILER_ENABLE_SSL=${SMTP_ENABLE_SSL}
+      - MAILER_ENABLE_STARTTLS=${SMTP_ENABLE_STARTTLS}
+
+      # Captcha Configuration (Optional)
+      - CAPTCHA_PROVIDER=${CAPTCHA_PROVIDER}
+      - CAPTCHA_SITE_KEY=${CAPTCHA_SITE_KEY}
+      - CAPTCHA_SECRET_KEY=${CAPTCHA_SECRET_KEY}
+
+    volumes:
+      - ./uploads:/uploads
+      - ./keila/data:/opt/app/data
+    networks:
+      - keila_internal
+      - proxy_network
+
+networks:
+  keila_internal:
+  proxy_network:
+    external: true

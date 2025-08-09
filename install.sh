@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager"
@@ -28,6 +28,7 @@ show_help() {
     echo -e "  minio      - Installiert nur MinIO"
     echo -e "  tiledesk   - Installiert nur TileDesk"
     echo -e "  nocodb     - Installiert nur NocoDB"
+    echo -e "  keila      - Installiert nur Keila Newsletter"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -86,6 +87,12 @@ install_nocodb() {
     bash "${SCRIPT_DIR}/nocodb/nocodb-install.sh"
 }
 
+# Funktion zum Installieren von Keila
+install_keila() {
+    echo -e "${GREEN}Starte Keila-Installation...${NC}"
+    bash "${SCRIPT_DIR}/keila/keila-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -115,6 +122,9 @@ case "$1" in
     nocodb)
         install_nocodb
         ;;
+    keila)
+        install_keila
+        ;;
     all)
         install_npm
         sleep 10
@@ -126,6 +136,7 @@ case "$1" in
         install_minio
         install_tiledesk
         install_nocodb
+        install_keila
         ;;
     help|--help|-h)
         show_help
