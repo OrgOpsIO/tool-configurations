@@ -11,7 +11,7 @@ services:
       - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - APP_PORT=8000
       - DB_CONNECTION=sqlite
-      - DB_DATABASE=/data/coolify/coolify.sqlite
+      - DB_DATABASE=/var/www/html/storage/app/coolify.sqlite
       - REDIS_HOST=coolify-redis
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_PORT=6379
@@ -21,17 +21,15 @@ services:
       - PUSHER_HOST=coolify-soketi
       - PUSHER_PORT=6001
       - PUSHER_SCHEME=http
-      # Disable Traefik/Proxy features
       - COOLIFY_PROXY_DISABLED=true
       - COOLIFY_DEFAULT_NETWORK=proxy_network
-      # Instance Configuration
       - COOLIFY_INSTANCE_ID=${COOLIFY_INSTANCE_ID}
       - COOLIFY_WHITE_LABEL=false
       - COOLIFY_AUTO_UPDATE=false
     volumes:
-      - ./data:/data
-      - ./backups:/backups
-      - ./ssh:/root/.ssh
+      - ./storage:/var/www/html/storage
+      - ./backups:/var/www/html/backups
+      - ./ssh:/var/www/html/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - coolify_internal
@@ -39,6 +37,7 @@ services:
     depends_on:
       - coolify-redis
       - coolify-soketi
+    user: "9999:9999"
 
   coolify-redis:
     image: redis:7-alpine
@@ -67,7 +66,6 @@ services:
     networks:
       - coolify_internal
 
-  # Coolify Queue Worker
   coolify-queue:
     image: ghcr.io/coollabsio/coolify:latest
     container_name: coolify-queue
@@ -78,7 +76,7 @@ services:
       - APP_KEY=${COOLIFY_APP_KEY}
       - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - DB_CONNECTION=sqlite
-      - DB_DATABASE=/data/coolify/coolify.sqlite
+      - DB_DATABASE=/var/www/html/storage/app/coolify.sqlite
       - REDIS_HOST=coolify-redis
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_PORT=6379
@@ -91,8 +89,8 @@ services:
       - COOLIFY_PROXY_DISABLED=true
       - COOLIFY_DEFAULT_NETWORK=proxy_network
     volumes:
-      - ./data:/data
-      - ./ssh:/root/.ssh
+      - ./storage:/var/www/html/storage
+      - ./ssh:/var/www/html/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - coolify_internal
@@ -100,6 +98,7 @@ services:
     depends_on:
       - coolify-redis
       - coolify-soketi
+    user: "9999:9999"
 
 networks:
   coolify_internal:
