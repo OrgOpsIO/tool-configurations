@@ -38,7 +38,7 @@ fi
 # Generate Instance ID
 if [ -z "$COOLIFY_INSTANCE_ID" ]; then
     echo -e "${YELLOW}Generiere COOLIFY_INSTANCE_ID...${NC}"
-    INSTANCE_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+    INSTANCE_ID=$(uuidgen | tr '[:upper:]' '[:lower:]' 2>/dev/null || generate_random 16)
     sed -i "s/^COOLIFY_INSTANCE_ID=.*/COOLIFY_INSTANCE_ID=$INSTANCE_ID/" .env
 fi
 
@@ -54,7 +54,13 @@ if [ -z "$PUSHER_APP_ID" ]; then
     sed -i "s/^PUSHER_APP_SECRET=.*/PUSHER_APP_SECRET=$PUSHER_SECRET/" .env
 fi
 
-# Generate Redis password if default
+# Generate secure passwords if still default
+if [ "$POSTGRES_PASSWORD" == "coolify_secure_password" ]; then
+    echo -e "${YELLOW}Generiere sicheres PostgreSQL Passwort...${NC}"
+    NEW_PG_PASS=$(openssl rand -base64 16)
+    sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$NEW_PG_PASS/" .env
+fi
+
 if [ "$REDIS_PASSWORD" == "redis_secure_password" ]; then
     echo -e "${YELLOW}Generiere sicheres Redis Passwort...${NC}"
     NEW_REDIS_PASS=$(openssl rand -base64 16)

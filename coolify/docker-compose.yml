@@ -19,6 +19,60 @@ services:
     networks:
       - coolify_internal
 
+  coolify-redis:
+    image: redis:7-alpine
+    container_name: coolify-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - coolify_internal
+
+  coolify-soketi:
+    image: quay.io/soketi/soketi:1.6-16-alpine
+    container_name: coolify-soketi
+    restart: always
+    environment:
+      - SOKETI_DEFAULT_APP_ID=${PUSHER_APP_ID}
+      - SOKETI_DEFAULT_APP_KEY=${PUSHER_APP_KEY}
+      - SOKETI_DEFAULT_APP_SECRET=${PUSHER_APP_SECRET}
+      - SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES=true
+    networks:
+      - coolify_internal
+
+  coolify-init:
+    image: ghcr.io/coollabsio/coolify:latest
+    container_name: coolify-init
+    command: sh -c "php artisan migrate --force && php artisan db:seed --force || true"
+    environment:
+      - APP_ENV=production
+      - APP_KEY=${COOLIFY_APP_KEY}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=coolify-db
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=coolify-redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=6379
+    volumes:
+      - ./coolify/storage:/var/www/html/storage
+    networks:
+      - coolify_internal
+    depends_on:
+      coolify-db:
+        condition: service_healthy
+      coolify-redis:
+        condition: service_started
+    restart: "no"
+
   coolify:
     image: ghcr.io/coollabsio/coolify:latest
     container_name: coolify
@@ -63,33 +117,8 @@ services:
         condition: service_started
       coolify-soketi:
         condition: service_started
-
-  coolify-redis:
-    image: redis:7-alpine
-    container_name: coolify-redis
-    restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    volumes:
-      - ./redis/data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - coolify_internal
-
-  coolify-soketi:
-    image: quay.io/soketi/soketi:1.6-16-alpine
-    container_name: coolify-soketi
-    restart: always
-    environment:
-      - SOKETI_DEFAULT_APP_ID=${PUSHER_APP_ID}
-      - SOKETI_DEFAULT_APP_KEY=${PUSHER_APP_KEY}
-      - SOKETI_DEFAULT_APP_SECRET=${PUSHER_APP_SECRET}
-      - SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES=true
-    networks:
-      - coolify_internal
+      coolify-init:
+        condition: service_completed_successfully
 
   coolify-queue:
     image: ghcr.io/coollabsio/coolify:latest
@@ -131,6 +160,8 @@ services:
         condition: service_started
       coolify-soketi:
         condition: service_started
+      coolify-init:
+        condition: service_completed_successfully
 
 networks:
   coolify_internal:

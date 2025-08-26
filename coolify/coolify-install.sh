@@ -27,10 +27,9 @@ if ! docker network inspect proxy_network &>/dev/null; then
 fi
 
 # Docker-Version prüfen
-DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' | cut -d. -f1)
-if [ "$DOCKER_VERSION" -lt 20 ]; then
-    echo -e "${RED}Docker Version 20+ wird benötigt. Aktuelle Version: $(docker version --format '{{.Server.Version}}')${NC}"
-    exit 1
+DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2>/dev/null | cut -d. -f1)
+if [ "$DOCKER_VERSION" -lt 20 ] 2>/dev/null; then
+    echo -e "${YELLOW}Docker Version 20+ wird empfohlen. Aktuelle Version: $(docker version --format '{{.Server.Version}}' 2>/dev/null)${NC}"
 fi
 
 # Überprüfen, ob das Zielverzeichnis existiert, sonst erstellen
@@ -76,8 +75,9 @@ fi
 
 # Verzeichnisse erstellen, falls sie nicht existieren
 echo -e "${YELLOW}Erstelle benötigte Verzeichnisse in $TARGET_DIR${NC}"
-mkdir -p data/coolify
-mkdir -p backups
+mkdir -p coolify/storage
+mkdir -p coolify/backups
+mkdir -p postgres/data
 mkdir -p ssh
 mkdir -p redis/data
 
@@ -98,8 +98,16 @@ echo -e "${YELLOW}Starte Coolify mit Docker Compose in $TARGET_DIR...${NC}"
 docker compose up -d
 
 # Warte auf den Start
-echo -e "${YELLOW}Warte auf Coolify Start...${NC}"
-sleep 15
+echo -e "${YELLOW}Warte auf Coolify Start (Database-Migration läuft)...${NC}"
+sleep 20
+
+# Check Status
+echo -e "${YELLOW}Überprüfe Coolify Status...${NC}"
+if docker ps | grep -q coolify; then
+    echo -e "${GREEN}✅ Coolify läuft!${NC}"
+else
+    echo -e "${RED}⚠️  Coolify läuft möglicherweise nicht korrekt. Prüfe die Logs mit: docker logs coolify${NC}"
+fi
 
 # Erfolgsmeldung
 echo -e "${GREEN}Coolify-Installation abgeschlossen!${NC}"
@@ -122,6 +130,8 @@ if [ -f ".env" ]; then
     echo -e ""
     echo -e "${GREEN}Nach der Proxy-Konfiguration:${NC}"
     echo -e "URL: https://${SUBDOMAIN}.${DOMAIN_NAME}"
+    echo -e ""
+    echo -e "${YELLOW}Bei der ersten Anmeldung müssen Sie einen Admin-User erstellen.${NC}"
     echo -e ""
     echo -e "${RED}WICHTIG für deployed Apps:${NC}"
     echo -e "${YELLOW}Da Coolify kein eigenes Proxy-Management macht, müssen Sie:${NC}"
