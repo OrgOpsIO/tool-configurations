@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  coolify-db:
+    image: postgres:16-alpine
+    container_name: coolify-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - coolify_internal
+
   coolify:
     image: ghcr.io/coollabsio/coolify:latest
     container_name: coolify
@@ -10,8 +28,12 @@ services:
       - APP_KEY=${COOLIFY_APP_KEY}
       - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - APP_PORT=8000
-      - DB_CONNECTION=sqlite
-      - DB_DATABASE=/var/www/html/storage/app/coolify.sqlite
+      - DB_CONNECTION=pgsql
+      - DB_HOST=coolify-db
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_HOST=coolify-redis
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_PORT=6379
@@ -27,17 +49,20 @@ services:
       - COOLIFY_WHITE_LABEL=false
       - COOLIFY_AUTO_UPDATE=false
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./backups:/var/www/html/backups
-      - ./ssh:/var/www/html/.ssh
+      - ./coolify/storage:/var/www/html/storage
+      - ./coolify/backups:/var/www/html/backups
+      - ./ssh:/root/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - coolify_internal
       - proxy_network
     depends_on:
-      - coolify-redis
-      - coolify-soketi
-    user: "9999:9999"
+      coolify-db:
+        condition: service_healthy
+      coolify-redis:
+        condition: service_started
+      coolify-soketi:
+        condition: service_started
 
   coolify-redis:
     image: redis:7-alpine
@@ -75,8 +100,12 @@ services:
       - APP_ENV=production
       - APP_KEY=${COOLIFY_APP_KEY}
       - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
-      - DB_CONNECTION=sqlite
-      - DB_DATABASE=/var/www/html/storage/app/coolify.sqlite
+      - DB_CONNECTION=pgsql
+      - DB_HOST=coolify-db
+      - DB_PORT=5432
+      - DB_DATABASE=${POSTGRES_DB}
+      - DB_USERNAME=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_HOST=coolify-redis
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_PORT=6379
@@ -89,16 +118,19 @@ services:
       - COOLIFY_PROXY_DISABLED=true
       - COOLIFY_DEFAULT_NETWORK=proxy_network
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./ssh:/var/www/html/.ssh
+      - ./coolify/storage:/var/www/html/storage
+      - ./ssh:/root/.ssh
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - coolify_internal
       - proxy_network
     depends_on:
-      - coolify-redis
-      - coolify-soketi
-    user: "9999:9999"
+      coolify-db:
+        condition: service_healthy
+      coolify-redis:
+        condition: service_started
+      coolify-soketi:
+        condition: service_started
 
 networks:
   coolify_internal:
