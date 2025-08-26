@@ -93,6 +93,12 @@ install_keila() {
     bash "${SCRIPT_DIR}/keila/keila-install.sh"
 }
 
+# Funktion zum Installieren von Coolify
+install_coolify() {
+    echo -e "${GREEN}Starte Coolify-Installation...${NC}"
+    bash "${SCRIPT_DIR}/coolify/coolify-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -125,6 +131,9 @@ case "$1" in
     keila)
         install_keila
         ;;
+    coolify)
+        install_coolify
+        ;;
     all)
         install_npm
         sleep 10
@@ -137,6 +146,7 @@ case "$1" in
         install_tiledesk
         install_nocodb
         install_keila
+        install_coolify
         ;;
     help|--help|-h)
         show_help
