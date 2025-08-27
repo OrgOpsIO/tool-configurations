@@ -47,7 +47,7 @@ fi
 # Überprüfen, ob die .env existiert, sonst example.env kopieren und generieren
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Kopiere example.env nach .env und generiere sichere Werte...${NC}"
-    cp "$SCRIPT_DIR/example.env" ./.env
+    cp "$SCRIPT_DIR/.env" ./.env
 
     # Generate secure values (wie im offiziellen Script)
     sed -i "s|^APP_ID=.*|APP_ID=$(openssl rand -hex 16)|" .env
