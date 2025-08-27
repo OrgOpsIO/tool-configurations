@@ -2,9 +2,9 @@
 
 # ---------------------------------------------
 # Coolify Docker-Compose Installation
+# Based on official Coolify installation
 # ---------------------------------------------
 
-# Farben für die Ausgabe
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RED='\033[0;31m'
@@ -15,21 +15,16 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Zielverzeichnis im Home-Verzeichnis
 TARGET_DIR=~/coolify-compose
+CURRENT_USER=$USER
 
 echo -e "${GREEN}Coolify Installation mit Docker Compose wird gestartet...${NC}"
-echo -e "${YELLOW}HINWEIS: Diese Installation nutzt NPM als Proxy, nicht Coolify's eingebauten Traefik!${NC}"
+echo -e "${YELLOW}Basierend auf der offiziellen Coolify-Installation${NC}"
 
 # Prüfen ob das Proxy-Netzwerk existiert
 if ! docker network inspect proxy_network &>/dev/null; then
     echo -e "${RED}Das Proxy-Netzwerk existiert nicht. Stellen Sie sicher, dass Nginx Proxy Manager installiert ist.${NC}"
     echo -e "${YELLOW}Führen Sie zuerst './install.sh npm' aus oder installieren Sie den Proxy manuell.${NC}"
     exit 1
-fi
-
-# Docker-Version prüfen
-DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2>/dev/null | cut -d. -f1)
-if [ "$DOCKER_VERSION" -lt 20 ] 2>/dev/null; then
-    echo -e "${YELLOW}Docker Version 20+ wird empfohlen. Aktuelle Version: $(docker version --format '{{.Server.Version}}' 2>/dev/null)${NC}"
 fi
 
 # Überprüfen, ob das Zielverzeichnis existiert, sonst erstellen
@@ -49,93 +44,97 @@ else
     echo -e "${YELLOW}docker-compose.yml existiert bereits in $TARGET_DIR${NC}"
 fi
 
-# Config Generator kopieren
-if [ ! -f "generate-config.sh" ]; then
-    echo -e "${YELLOW}Kopiere generate-config.sh nach $TARGET_DIR${NC}"
-    cp "$SCRIPT_DIR/generate-config.sh" .
-    chmod +x generate-config.sh
-fi
-
-# NPM Helper Script kopieren
-if [ ! -f "add-app-to-npm.sh" ]; then
-    echo -e "${YELLOW}Kopiere add-app-to-npm.sh nach $TARGET_DIR${NC}"
-    cp "$SCRIPT_DIR/add-app-to-npm.sh" .
-    chmod +x add-app-to-npm.sh
-fi
-
-# Überprüfen, ob die .env existiert, sonst example.env kopieren
+# Überprüfen, ob die .env existiert, sonst example.env kopieren und generieren
 if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Kopiere example.env nach $TARGET_DIR/.env${NC}"
-    cp "$SCRIPT_DIR/.env" ./.env
+    echo -e "${YELLOW}Kopiere example.env nach .env und generiere sichere Werte...${NC}"
+    cp "$SCRIPT_DIR/example.env" ./.env
 
-    # Konfiguration generieren
-    echo -e "${YELLOW}Generiere Coolify Konfiguration...${NC}"
-    ./generate-config.sh
+    # Generate secure values (wie im offiziellen Script)
+    sed -i "s|^APP_ID=.*|APP_ID=$(openssl rand -hex 16)|" .env
+    sed -i "s|^APP_KEY=.*|APP_KEY=base64:$(openssl rand -base64 32)|" .env
+    sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$(openssl rand -base64 32)|" .env
+    sed -i "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=$(openssl rand -base64 32)|" .env
+    sed -i "s|^PUSHER_APP_ID=.*|PUSHER_APP_ID=$(openssl rand -hex 32)|" .env
+    sed -i "s|^PUSHER_APP_KEY=.*|PUSHER_APP_KEY=$(openssl rand -hex 32)|" .env
+    sed -i "s|^PUSHER_APP_SECRET=.*|PUSHER_APP_SECRET=$(openssl rand -hex 32)|" .env
+
+    # Generate Instance ID
+    INSTANCE_ID=$(uuidgen 2>/dev/null | tr '[:upper:]' '[:lower:]' || openssl rand -hex 16)
+    sed -i "s|^COOLIFY_INSTANCE_ID=.*|COOLIFY_INSTANCE_ID=$INSTANCE_ID|" .env
+
+    echo -e "${GREEN}Sichere Werte wurden generiert!${NC}"
+else
+    echo -e "${YELLOW}.env existiert bereits${NC}"
 fi
 
-# Verzeichnisse erstellen, falls sie nicht existieren
-echo -e "${YELLOW}Erstelle benötigte Verzeichnisse in $TARGET_DIR${NC}"
-mkdir -p coolify/storage
-mkdir -p coolify/backups
-mkdir -p postgres/data
-mkdir -p ssh
-mkdir -p redis/data
+# Verzeichnisstruktur erstellen (wie im offiziellen Script)
+echo -e "${YELLOW}Erstelle Coolify-Verzeichnisstruktur...${NC}"
+mkdir -p coolify/{ssh,applications,databases,services,backups,webhooks-during-maintenance}
+mkdir -p coolify/ssh/{keys,mux}
 
-# SSH Keys generieren falls nicht vorhanden
-if [ ! -f ssh/id_rsa ]; then
-    echo -e "${YELLOW}Generiere SSH Keys für Coolify...${NC}"
-    ssh-keygen -t rsa -b 4096 -f ssh/id_rsa -N "" -q
+# SSH-Key für localhost generieren
+if [ ! -f coolify/ssh/keys/id.${CURRENT_USER}@host.docker.internal ]; then
+    echo -e "${YELLOW}Generiere SSH-Key für localhost-Zugriff...${NC}"
+    ssh-keygen -t ed25519 -a 100 -f coolify/ssh/keys/id.${CURRENT_USER}@host.docker.internal -q -N "" -C coolify
+
+    # SSH-Key zu authorized_keys hinzufügen
+    if [ ! -f ~/.ssh/authorized_keys ]; then
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        touch ~/.ssh/authorized_keys
+        chmod 600 ~/.ssh/authorized_keys
+    fi
+
+    cat coolify/ssh/keys/id.${CURRENT_USER}@host.docker.internal.pub >> ~/.ssh/authorized_keys
+    rm -f coolify/ssh/keys/id.${CURRENT_USER}@host.docker.internal.pub
 fi
 
-# Berechtigungen setzen
+# Berechtigungen setzen (UID 9999 wie im offiziellen Script)
 echo -e "${YELLOW}Setze korrekte Berechtigungen...${NC}"
-chmod 700 ssh
-chmod 600 ssh/id_rsa 2>/dev/null
-chmod 644 ssh/id_rsa.pub 2>/dev/null
+sudo chown -R 9999:root coolify
+sudo chmod -R 700 coolify
 
 # Docker Compose starten
-echo -e "${YELLOW}Starte Coolify mit Docker Compose in $TARGET_DIR...${NC}"
+echo -e "${YELLOW}Starte Coolify mit Docker Compose...${NC}"
 docker compose up -d
 
 # Warte auf den Start
-echo -e "${YELLOW}Warte auf Coolify Start (Database-Migration läuft)...${NC}"
-sleep 20
+echo -e "${YELLOW}Warte auf Coolify Start (30 Sekunden für Datenbank-Migrationen)...${NC}"
+sleep 30
 
-# Check Status
-echo -e "${YELLOW}Überprüfe Coolify Status...${NC}"
-if docker ps | grep -q coolify; then
-    echo -e "${GREEN}✅ Coolify läuft!${NC}"
+# Check ob Coolify läuft
+if curl -s --fail http://localhost:8080/api/health >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Coolify läuft erfolgreich!${NC}"
 else
-    echo -e "${RED}⚠️  Coolify läuft möglicherweise nicht korrekt. Prüfe die Logs mit: docker logs coolify${NC}"
+    echo -e "${RED}⚠️  Coolify Health-Check fehlgeschlagen. Prüfe die Logs mit: docker logs coolify${NC}"
 fi
 
 # Erfolgsmeldung
 echo -e "${GREEN}Coolify-Installation abgeschlossen!${NC}"
-if [ -f ".env" ]; then
-    # Laden der Umgebungsvariablen aus .env für die Ausgabe
-    source .env
-    echo -e "${GREEN}Ihre Coolify-Instanz läuft jetzt.${NC}"
-    echo -e "${YELLOW}Wichtig: Konfigurieren Sie einen Proxy Host in Nginx Proxy Manager:${NC}"
-    echo -e "${YELLOW}1. Öffnen Sie http://$(hostname -I | awk '{print $1}'):81${NC}"
-    echo -e "${YELLOW}2. Fügen Sie einen neuen Proxy Host hinzu:${NC}"
-    echo -e "${YELLOW}   - Domain: ${SUBDOMAIN}.${DOMAIN_NAME}${NC}"
-    echo -e "${YELLOW}   - Scheme: http${NC}"
-    echo -e "${YELLOW}   - Forward Hostname/IP: coolify${NC}"
-    echo -e "${YELLOW}   - Forward Port: 8000${NC}"
-    echo -e "${YELLOW}   - WebSocket Support: Aktivieren${NC}"
-    echo -e "${YELLOW}   - Block Common Exploits: Aktivieren${NC}"
-    echo -e "${YELLOW}   - Aktivieren Sie SSL und wählen Sie Let's Encrypt${NC}"
-    echo -e ""
-    echo -e "${YELLOW}3. Stellen Sie sicher, dass ein DNS A-Record für ${SUBDOMAIN}.${DOMAIN_NAME} existiert${NC}"
-    echo -e ""
-    echo -e "${GREEN}Nach der Proxy-Konfiguration:${NC}"
-    echo -e "URL: https://${SUBDOMAIN}.${DOMAIN_NAME}"
-    echo -e ""
-    echo -e "${YELLOW}Bei der ersten Anmeldung müssen Sie einen Admin-User erstellen.${NC}"
-    echo -e ""
-    echo -e "${RED}WICHTIG für deployed Apps:${NC}"
-    echo -e "${YELLOW}Da Coolify kein eigenes Proxy-Management macht, müssen Sie:${NC}"
-    echo -e "${YELLOW}1. Jede deployed App manuell in NPM hinzufügen${NC}"
-    echo -e "${YELLOW}2. Nutzen Sie ./add-app-to-npm.sh für eine Anleitung${NC}"
-    echo -e "${YELLOW}3. Apps nutzen das 'proxy_network' für Erreichbarkeit${NC}"
-fi
+echo -e ""
+echo -e "${YELLOW}=== NPM Proxy Host Konfiguration ===${NC}"
+echo -e "${YELLOW}1. Öffnen Sie http://$(hostname -I | awk '{print $1}'):81${NC}"
+echo -e "${YELLOW}2. Fügen Sie einen neuen Proxy Host hinzu:${NC}"
+echo -e "   - Domain: deploy.orgops.io"
+echo -e "   - Scheme: http"
+echo -e "   - Forward Hostname/IP: coolify"
+echo -e "   - Forward Port: 8080"
+echo -e "   - WebSocket Support: Aktivieren"
+echo -e "   - Block Common Exploits: Aktivieren"
+echo -e "   - SSL: Let's Encrypt aktivieren"
+echo -e ""
+echo -e "${YELLOW}3. Für Soketi/Realtime fügen Sie einen weiteren Proxy Host hinzu:${NC}"
+echo -e "   - Domain: soketi.deploy.orgops.io"
+echo -e "   - Forward Hostname/IP: coolify-realtime"
+echo -e "   - Forward Port: 6001"
+echo -e "   - WebSocket Support: Aktivieren"
+echo -e ""
+echo -e "${GREEN}Nach der NPM-Konfiguration:${NC}"
+echo -e "URL: https://deploy.orgops.io"
+echo -e ""
+echo -e "${YELLOW}Bei der ersten Anmeldung werden Sie aufgefordert, einen Admin-Account zu erstellen.${NC}"
+echo -e ""
+echo -e "${RED}WICHTIG: Sichern Sie Ihre .env-Datei an einem sicheren Ort!${NC}"
+
+# Backup der .env erstellen
+cp .env .env.backup

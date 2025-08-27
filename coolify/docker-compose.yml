@@ -1,169 +1,131 @@
 version: '3.8'
 
 services:
-  coolify-db:
-    image: postgres:16-alpine
-    container_name: coolify-postgres
+  coolify:
+    image: "${REGISTRY_URL:-ghcr.io}/coollabsio/coolify:${LATEST_IMAGE:-latest}"
+    container_name: coolify
     restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+    working_dir: /var/www/html
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
-      - ./postgres/data:/var/lib/postgresql/data
+      - type: bind
+        source: ./.env
+        target: /var/www/html/.env
+        read_only: true
+      - ./coolify/ssh:/var/www/html/storage/app/ssh
+      - ./coolify/applications:/var/www/html/storage/app/applications
+      - ./coolify/databases:/var/www/html/storage/app/databases
+      - ./coolify/services:/var/www/html/storage/app/services
+      - ./coolify/backups:/var/www/html/storage/app/backups
+      - ./coolify/webhooks-during-maintenance:/var/www/html/storage/app/webhooks-during-maintenance
+      # WICHTIG: Kein proxy-Verzeichnis mounten!
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - APP_ENV=production
+      - PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT:-256M}
+      - PHP_FPM_PM_CONTROL=${PHP_FPM_PM_CONTROL:-dynamic}
+      - PHP_FPM_PM_START_SERVERS=${PHP_FPM_PM_START_SERVERS:-1}
+      - PHP_FPM_PM_MIN_SPARE_SERVERS=${PHP_FPM_PM_MIN_SPARE_SERVERS:-1}
+      - PHP_FPM_PM_MAX_SPARE_SERVERS=${PHP_FPM_PM_MAX_SPARE_SERVERS:-10}
+      # PROXY DEAKTIVIERUNG
+      - COOLIFY_DEFAULT_PROXY=disabled
+      - COOLIFY_PROXY_ENABLED=false
+      - DISABLE_PROXY=true
+      - NO_PROXY_MANAGEMENT=true
+    env_file:
+      - ./.env
+    expose:
+      - "8080"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: curl --fail http://127.0.0.1:8080/api/health || exit 1
+      interval: 5s
+      retries: 10
+      timeout: 2s
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      soketi:
+        condition: service_healthy
+    networks:
+      - coolify_internal
+      - proxy_network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: coolify-db
+    restart: always
+    volumes:
+      - coolify-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: "${DB_USERNAME}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_DATABASE:-coolify}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE:-coolify}"]
+      interval: 5s
+      retries: 10
+      timeout: 2s
+      start_period: 30s
     networks:
       - coolify_internal
 
-  coolify-redis:
+  redis:
     image: redis:7-alpine
     container_name: coolify-redis
     restart: always
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
     volumes:
-      - ./redis/data:/data
+      - coolify-redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      test: redis-cli ping
+      interval: 5s
+      retries: 10
+      timeout: 2s
+      start_period: 20s
     networks:
       - coolify_internal
 
-  coolify-soketi:
-    image: quay.io/soketi/soketi:1.6-16-alpine
-    container_name: coolify-soketi
+  soketi:
+    image: '${REGISTRY_URL:-ghcr.io}/coollabsio/coolify-realtime:1.0.10'
+    container_name: coolify-realtime
+    extra_hosts:
+      - host.docker.internal:host-gateway
     restart: always
+    volumes:
+      - ./coolify/ssh:/var/www/html/storage/app/ssh
     environment:
-      - SOKETI_DEFAULT_APP_ID=${PUSHER_APP_ID}
-      - SOKETI_DEFAULT_APP_KEY=${PUSHER_APP_KEY}
-      - SOKETI_DEFAULT_APP_SECRET=${PUSHER_APP_SECRET}
-      - SOKETI_DEFAULT_APP_ENABLE_CLIENT_MESSAGES=true
+      APP_NAME: "${APP_NAME:-Coolify}"
+      SOKETI_DEBUG: "${SOKETI_DEBUG:-false}"
+      SOKETI_DEFAULT_APP_ID: "${PUSHER_APP_ID}"
+      SOKETI_DEFAULT_APP_KEY: "${PUSHER_APP_KEY}"
+      SOKETI_DEFAULT_APP_SECRET: "${PUSHER_APP_SECRET}"
+    expose:
+      - "6001"
+      - "6002"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:6001/ready && wget -qO- http://127.0.0.1:6002/ready || exit 1"]
+      interval: 5s
+      retries: 10
+      timeout: 2s
+      start_period: 20s
     networks:
       - coolify_internal
 
-  coolify-init:
-    image: ghcr.io/coollabsio/coolify:latest
-    container_name: coolify-init
-    command: sh -c "php artisan migrate --force && php artisan db:seed --force || true"
-    environment:
-      - APP_ENV=production
-      - APP_KEY=${COOLIFY_APP_KEY}
-      - DB_CONNECTION=pgsql
-      - DB_HOST=coolify-db
-      - DB_PORT=5432
-      - DB_DATABASE=${POSTGRES_DB}
-      - DB_USERNAME=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_HOST=coolify-redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_PORT=6379
-    volumes:
-      - ./coolify/storage:/var/www/html/storage
-    networks:
-      - coolify_internal
-    depends_on:
-      coolify-db:
-        condition: service_healthy
-      coolify-redis:
-        condition: service_started
-    restart: "no"
-
-  coolify:
-    image: ghcr.io/coollabsio/coolify:latest
-    container_name: coolify
-    restart: always
-    environment:
-      - APP_ENV=production
-      - APP_KEY=${COOLIFY_APP_KEY}
-      - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
-      - APP_PORT=8000
-      - DB_CONNECTION=pgsql
-      - DB_HOST=coolify-db
-      - DB_PORT=5432
-      - DB_DATABASE=${POSTGRES_DB}
-      - DB_USERNAME=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_HOST=coolify-redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_PORT=6379
-      - PUSHER_APP_ID=${PUSHER_APP_ID}
-      - PUSHER_APP_KEY=${PUSHER_APP_KEY}
-      - PUSHER_APP_SECRET=${PUSHER_APP_SECRET}
-      - PUSHER_HOST=coolify-soketi
-      - PUSHER_PORT=6001
-      - PUSHER_SCHEME=http
-      - COOLIFY_PROXY_DISABLED=true
-      - COOLIFY_DEFAULT_NETWORK=proxy_network
-      - COOLIFY_INSTANCE_ID=${COOLIFY_INSTANCE_ID}
-      - COOLIFY_WHITE_LABEL=false
-      - COOLIFY_AUTO_UPDATE=false
-    volumes:
-      - ./coolify/storage:/var/www/html/storage
-      - ./coolify/backups:/var/www/html/backups
-      - ./ssh:/root/.ssh
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - coolify_internal
-      - proxy_network
-    depends_on:
-      coolify-db:
-        condition: service_healthy
-      coolify-redis:
-        condition: service_started
-      coolify-soketi:
-        condition: service_started
-      coolify-init:
-        condition: service_completed_successfully
-
-  coolify-queue:
-    image: ghcr.io/coollabsio/coolify:latest
-    container_name: coolify-queue
-    restart: always
-    command: php artisan horizon
-    environment:
-      - APP_ENV=production
-      - APP_KEY=${COOLIFY_APP_KEY}
-      - APP_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
-      - DB_CONNECTION=pgsql
-      - DB_HOST=coolify-db
-      - DB_PORT=5432
-      - DB_DATABASE=${POSTGRES_DB}
-      - DB_USERNAME=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - REDIS_HOST=coolify-redis
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_PORT=6379
-      - PUSHER_APP_ID=${PUSHER_APP_ID}
-      - PUSHER_APP_KEY=${PUSHER_APP_KEY}
-      - PUSHER_APP_SECRET=${PUSHER_APP_SECRET}
-      - PUSHER_HOST=coolify-soketi
-      - PUSHER_PORT=6001
-      - PUSHER_SCHEME=http
-      - COOLIFY_PROXY_DISABLED=true
-      - COOLIFY_DEFAULT_NETWORK=proxy_network
-    volumes:
-      - ./coolify/storage:/var/www/html/storage
-      - ./ssh:/root/.ssh
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - coolify_internal
-      - proxy_network
-    depends_on:
-      coolify-db:
-        condition: service_healthy
-      coolify-redis:
-        condition: service_started
-      coolify-soketi:
-        condition: service_started
-      coolify-init:
-        condition: service_completed_successfully
+volumes:
+  coolify-db:
+    name: coolify-db
+  coolify-redis:
+    name: coolify-redis
 
 networks:
   coolify_internal:
+    name: coolify
+    driver: bridge
   proxy_network:
     external: true
