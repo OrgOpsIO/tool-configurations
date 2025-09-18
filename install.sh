@@ -99,6 +99,11 @@ install_coolify() {
     bash "${SCRIPT_DIR}/coolify/coolify-install.sh"
 }
 
+install_corteza() {
+    echo -e "${GREEN}Starte Corteza CRM Installation...${NC}"
+    bash "${SCRIPT_DIR}/corteza/corteza-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -134,6 +139,9 @@ case "$1" in
     coolify)
         install_coolify
         ;;
+    corteza)
+        install_corteza
+        ;;
     all)
         install_npm
         sleep 10
@@ -147,6 +155,7 @@ case "$1" in
         install_nocodb
         install_keila
         install_coolify
+        install_corteza
         ;;
     help|--help|-h)
         show_help
