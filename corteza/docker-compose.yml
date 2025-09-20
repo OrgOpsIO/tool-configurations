@@ -41,6 +41,9 @@ services:
       - PROVISION_MIGRATE_DATABASE=true
       - PROVISION_CONFIGURATION=true
       - UPGRADE_ALWAYS=true
+
+      - VIRTUAL_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - LETSENCRYPT_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
     networks:
       - corteza_internal
       - proxy_network
