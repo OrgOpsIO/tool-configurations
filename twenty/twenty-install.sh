@@ -52,9 +52,9 @@ if [ ! -f ".env" ]; then
     APP_SECRET=$(openssl rand -base64 32 | tr -d '\n')
     sed -i "s|^APP_SECRET=.*|APP_SECRET=$APP_SECRET|" .env
 
-    # Generiere sicheres DB Passwort
+    # Generiere sicheres DB Passwort (nur alphanumerische Zeichen für URL-Kompatibilität)
     echo -e "${YELLOW}Generiere sicheres PostgreSQL Passwort...${NC}"
-    DB_PASS=$(openssl rand -base64 32 | tr -d '\n')
+    DB_PASS=$(openssl rand -hex 32)
     sed -i "s|^PG_DATABASE_PASSWORD=.*|PG_DATABASE_PASSWORD=$DB_PASS|" .env
 
     echo -e "${YELLOW}Bitte passen Sie die .env Datei in $TARGET_DIR an Ihre Bedürfnisse an.${NC}"
