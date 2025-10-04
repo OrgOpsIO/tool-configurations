@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager"
@@ -29,6 +29,7 @@ show_help() {
     echo -e "  tiledesk   - Installiert nur TileDesk"
     echo -e "  nocodb     - Installiert nur NocoDB"
     echo -e "  keila      - Installiert nur Keila Newsletter"
+    echo -e "  twenty     - Installiert nur Twenty CRM"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -104,6 +105,12 @@ install_corteza() {
     bash "${SCRIPT_DIR}/corteza/corteza-install.sh"
 }
 
+# Funktion zum Installieren von Twenty CRM
+install_twenty() {
+    echo -e "${GREEN}Starte Twenty CRM Installation...${NC}"
+    bash "${SCRIPT_DIR}/twenty/twenty-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -142,6 +149,9 @@ case "$1" in
     corteza)
         install_corteza
         ;;
+    twenty)
+        install_twenty
+        ;;
     all)
         install_npm
         sleep 10
@@ -156,6 +166,7 @@ case "$1" in
         install_keila
         install_coolify
         install_corteza
+        install_twenty
         ;;
     help|--help|-h)
         show_help
