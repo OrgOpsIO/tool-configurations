@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|authentik|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm        - Installiert nur Nginx Proxy Manager"
@@ -30,6 +30,7 @@ show_help() {
     echo -e "  nocodb     - Installiert nur NocoDB"
     echo -e "  keila      - Installiert nur Keila Newsletter"
     echo -e "  twenty     - Installiert nur Twenty CRM"
+    echo -e "  authentik  - Installiert nur Authentik (SSO/Identity Provider)"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -111,6 +112,12 @@ install_twenty() {
     bash "${SCRIPT_DIR}/twenty/twenty-install.sh"
 }
 
+# Funktion zum Installieren von Authentik
+install_authentik() {
+    echo -e "${GREEN}Starte Authentik Installation...${NC}"
+    bash "${SCRIPT_DIR}/authentik/authentik-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -152,6 +159,9 @@ case "$1" in
     twenty)
         install_twenty
         ;;
+    authentik)
+        install_authentik
+        ;;
     all)
         install_npm
         sleep 10
@@ -167,6 +177,7 @@ case "$1" in
         install_coolify
         install_corteza
         install_twenty
+        install_authentik
         ;;
     help|--help|-h)
         show_help

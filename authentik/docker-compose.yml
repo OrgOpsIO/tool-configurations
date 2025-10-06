@@ -1,0 +1,127 @@
+services:
+  postgresql:
+    image: postgres:14-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      POSTGRES_DB: ${PG_DB:-authentik}
+    networks:
+      - authentik_internal
+
+  redis:
+    image: redis:alpine
+    command: --save 60 1 --loglevel warning
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - redis:/data
+    networks:
+      - authentik_internal
+
+  server:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.0}
+    restart: always
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      # SMTP Configuration
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM}
+      # Error Reporting
+      AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      # Disable startup analytics and update checks
+      AUTHENTIK_DISABLE_STARTUP_ANALYTICS: ${AUTHENTIK_DISABLE_STARTUP_ANALYTICS:-true}
+      AUTHENTIK_DISABLE_UPDATE_CHECK: ${AUTHENTIK_DISABLE_UPDATE_CHECK:-false}
+      # Other settings
+      AUTHENTIK_LOG_LEVEL: ${AUTHENTIK_LOG_LEVEL:-info}
+    volumes:
+      - media:/media
+      - custom-templates:/templates
+    ports:
+      - "127.0.0.1:9000:9000"
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - authentik_internal
+      - proxy_network
+
+  worker:
+    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2025.4.0}
+    restart: always
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      # SMTP Configuration
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM}
+      # Error Reporting
+      AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      # Disable startup analytics and update checks
+      AUTHENTIK_DISABLE_STARTUP_ANALYTICS: ${AUTHENTIK_DISABLE_STARTUP_ANALYTICS:-true}
+      AUTHENTIK_DISABLE_UPDATE_CHECK: ${AUTHENTIK_DISABLE_UPDATE_CHECK:-false}
+      # Other settings
+      AUTHENTIK_LOG_LEVEL: ${AUTHENTIK_LOG_LEVEL:-info}
+    volumes:
+      - media:/media
+      - certs:/certs
+      - custom-templates:/templates
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - authentik_internal
+
+volumes:
+  database:
+    driver: local
+  redis:
+    driver: local
+  media:
+    driver: local
+  certs:
+    driver: local
+  custom-templates:
+    driver: local
+
+networks:
+  authentik_internal:
+    driver: bridge
+  proxy_network:
+    external: true
