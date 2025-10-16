@@ -31,6 +31,7 @@ show_help() {
     echo -e "  keila      - Installiert nur Keila Newsletter"
     echo -e "  twenty     - Installiert nur Twenty CRM"
     echo -e "  authentik  - Installiert nur Authentik (SSO/Identity Provider)"
+    echo -e "  openwebui  - Installiert nur Open WebUI (AI Chat Interface)"
     echo -e "  all        - Installiert alle Services"
     echo -e "  help       - Zeigt diese Hilfe an"
 }
@@ -118,6 +119,12 @@ install_authentik() {
     bash "${SCRIPT_DIR}/authentik/authentik-install.sh"
 }
 
+# Funktion zum Installieren von Open WebUI
+install_openwebui() {
+    echo -e "${GREEN}Starte Open WebUI Installation...${NC}"
+    bash "${SCRIPT_DIR}/openwebui/openwebui-install.sh"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -162,6 +169,9 @@ case "$1" in
     authentik)
         install_authentik
         ;;
+    openwebui)
+        install_openwebui
+        ;;
     all)
         install_npm
         sleep 10
@@ -178,6 +188,7 @@ case "$1" in
         install_corteza
         install_twenty
         install_authentik
+        install_openwebui
         ;;
     help|--help|-h)
         show_help

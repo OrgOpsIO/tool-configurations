@@ -1,0 +1,24 @@
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: always
+    environment:
+      # Optional: Weitere Konfigurationen
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      WEBUI_NAME: ${WEBUI_NAME:-Open WebUI}
+      # Optional: Ollama API Endpoint (falls extern)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+    volumes:
+      - openwebui-data:/app/backend/data
+    expose:
+      - 8080
+    networks:
+      - proxy_network
+
+volumes:
+  openwebui-data:
+    driver: local
+
+networks:
+  proxy_network:
+    external: true
