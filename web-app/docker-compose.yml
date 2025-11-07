@@ -1,0 +1,19 @@
+services:
+  web-app-{{APP_NAME}}:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    container_name: web-app-{{APP_NAME}}
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    networks:
+      - proxy_network
+
+networks:
+  proxy_network:
+    external: true

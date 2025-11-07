@@ -16,24 +16,26 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|authentik|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|authentik|webapp|all]"
     echo -e ""
     echo -e "Optionen:"
-    echo -e "  npm        - Installiert nur Nginx Proxy Manager"
-    echo -e "  n8n        - Installiert nur n8n"
-    echo -e "  freescout  - Installiert nur FreeScout"
-    echo -e "  mattermost - Installiert nur Mattermost"
-    echo -e "  ghost      - Installiert nur Ghost CMS"
-    echo -e "  nextcloud  - Installiert nur Nextcloud"
-    echo -e "  minio      - Installiert nur MinIO"
-    echo -e "  tiledesk   - Installiert nur TileDesk"
-    echo -e "  nocodb     - Installiert nur NocoDB"
-    echo -e "  keila      - Installiert nur Keila Newsletter"
-    echo -e "  twenty     - Installiert nur Twenty CRM"
-    echo -e "  authentik  - Installiert nur Authentik (SSO/Identity Provider)"
-    echo -e "  openwebui  - Installiert nur Open WebUI (AI Chat Interface)"
-    echo -e "  all        - Installiert alle Services"
-    echo -e "  help       - Zeigt diese Hilfe an"
+    echo -e "  npm              - Installiert nur Nginx Proxy Manager"
+    echo -e "  n8n              - Installiert nur n8n"
+    echo -e "  freescout        - Installiert nur FreeScout"
+    echo -e "  mattermost       - Installiert nur Mattermost"
+    echo -e "  ghost            - Installiert nur Ghost CMS"
+    echo -e "  nextcloud        - Installiert nur Nextcloud"
+    echo -e "  minio            - Installiert nur MinIO"
+    echo -e "  tiledesk         - Installiert nur TileDesk"
+    echo -e "  nocodb           - Installiert nur NocoDB"
+    echo -e "  keila            - Installiert nur Keila Newsletter"
+    echo -e "  twenty           - Installiert nur Twenty CRM"
+    echo -e "  authentik        - Installiert nur Authentik (SSO/Identity Provider)"
+    echo -e "  openwebui        - Installiert nur Open WebUI (AI Chat Interface)"
+    echo -e "  webapp <name>    - Installiert eine generische Web-App Deployment-Hülle"
+    echo -e "                     Beispiel: $0 webapp shop"
+    echo -e "  all              - Installiert alle Services (ohne Web-Apps)"
+    echo -e "  help             - Zeigt diese Hilfe an"
 }
 
 # Funktion zum Installieren von Nginx Proxy Manager
@@ -125,6 +127,19 @@ install_openwebui() {
     bash "${SCRIPT_DIR}/openwebui/openwebui-install.sh"
 }
 
+# Funktion zum Installieren von Web-Apps
+install_webapp() {
+    local app_name=$1
+    if [ -z "$app_name" ]; then
+        echo -e "${RED}Fehler: Kein App-Name angegeben!${NC}"
+        echo -e "${YELLOW}Verwendung: $0 webapp <app-name>${NC}"
+        echo -e "${YELLOW}Beispiel: $0 webapp shop${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Starte Web-App Installation für '${app_name}'...${NC}"
+    bash "${SCRIPT_DIR}/web-app/web-app-install.sh" "$app_name"
+}
+
 # Hauptlogik
 case "$1" in
     npm)
@@ -171,6 +186,10 @@ case "$1" in
         ;;
     openwebui)
         install_openwebui
+        ;;
+    webapp)
+        shift  # Entferne das erste Argument (webapp)
+        install_webapp "$@"
         ;;
     all)
         install_npm
