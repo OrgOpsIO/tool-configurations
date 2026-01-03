@@ -14,13 +14,26 @@ services:
       - "127.0.0.1:${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf
       - ./init:/docker-entrypoint-initdb.d
     command: >
       postgres
-      -c config_file=/etc/postgresql/postgresql.conf
-      -c hba_file=/etc/postgresql/pg_hba.conf
+      -c max_connections=100
+      -c shared_buffers=128MB
+      -c effective_cache_size=256MB
+      -c maintenance_work_mem=64MB
+      -c work_mem=4MB
+      -c wal_buffers=4MB
+      -c min_wal_size=80MB
+      -c max_wal_size=1GB
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c password_encryption=scram-sha-256
+      -c logging_collector=on
+      -c log_statement=mod
+      -c log_connections=on
+      -c log_disconnections=on
+      -c timezone=Europe/Berlin
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s

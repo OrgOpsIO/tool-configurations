@@ -144,16 +144,6 @@ else
     cp "$SCRIPT_DIR/templates/docker-compose-private.yml" "$INSTANCE_DIR/docker-compose.yml"
 fi
 
-# PostgreSQL Konfigurationsdateien kopieren
-echo -e "${YELLOW}Kopiere PostgreSQL Konfigurationsdateien...${NC}"
-cp "$SCRIPT_DIR/templates/postgresql.conf" "$INSTANCE_DIR/config/"
-
-if [ "$IS_PUBLIC" == true ]; then
-    cp "$SCRIPT_DIR/templates/pg_hba_public.conf" "$INSTANCE_DIR/config/pg_hba.conf"
-else
-    cp "$SCRIPT_DIR/templates/pg_hba_private.conf" "$INSTANCE_DIR/config/pg_hba.conf"
-fi
-
 # Init-Script für Application User erstellen
 echo -e "${YELLOW}Erstelle Initialisierungs-Script...${NC}"
 cat > "$INSTANCE_DIR/init/01-create-app-user.sh" << EOF
@@ -304,15 +294,15 @@ $INSTANCE_DIR/
 ├── .env                    # Umgebungsvariablen und Passwörter
 ├── docker-compose.yml      # Docker Compose Konfiguration
 ├── README.txt             # Diese Datei
-├── config/                # Konfigurationsdateien
-│   ├── postgresql.conf
-│   ├── pg_hba.conf
-│   └── server.crt/key     # SSL-Zertifikate (nur public)
+├── config/                # SSL-Zertifikate (nur für public)
+│   ├── server.crt
+│   └── server.key
 ├── init/                  # Initialisierungs-Scripts
 │   └── 01-create-app-user.sh
 └── backups/               # Backup-Verzeichnis
 
 Hinweis: PostgreSQL Daten werden in einem Docker Named Volume gespeichert.
+PostgreSQL-Parameter sind direkt im docker-compose.yml konfiguriert.
 
 MANAGEMENT SCRIPT
 =================
