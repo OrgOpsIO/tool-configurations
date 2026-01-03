@@ -7,7 +7,6 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_ADMIN_PASSWORD}
       - POSTGRES_USER=postgres
       - POSTGRES_DB=${POSTGRES_DB}
-      - PGDATA=/var/lib/postgresql/data/pgdata
       - TZ=${TIMEZONE}
     ports:
       # Auf allen Interfaces erreichbar - ÖFFENTLICH
