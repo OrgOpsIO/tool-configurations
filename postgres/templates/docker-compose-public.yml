@@ -13,7 +13,7 @@ services:
       # Auf allen Interfaces erreichbar - ÖFFENTLICH
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
       - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf
       - ./config/server.crt:/var/lib/postgresql/server.crt
@@ -42,6 +42,10 @@ services:
           memory: 512M
     networks:
       - postgres_internal
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   postgres_internal:

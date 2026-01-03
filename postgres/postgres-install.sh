@@ -98,7 +98,7 @@ echo -e "${BLUE}📍 Port $POSTGRES_PORT wird verwendet${NC}"
 
 # Instanz-Verzeichnisstruktur erstellen
 echo -e "${YELLOW}Erstelle Verzeichnisstruktur...${NC}"
-mkdir -p "$INSTANCE_DIR"/{data,config,init,backups}
+mkdir -p "$INSTANCE_DIR"/{config,init,backups}
 
 # Passwörter generieren
 echo -e "${YELLOW}Generiere sichere Passwörter...${NC}"
@@ -304,7 +304,6 @@ $INSTANCE_DIR/
 ├── .env                    # Umgebungsvariablen und Passwörter
 ├── docker-compose.yml      # Docker Compose Konfiguration
 ├── README.txt             # Diese Datei
-├── data/                  # PostgreSQL Daten (wird automatisch erstellt)
 ├── config/                # Konfigurationsdateien
 │   ├── postgresql.conf
 │   ├── pg_hba.conf
@@ -312,6 +311,8 @@ $INSTANCE_DIR/
 ├── init/                  # Initialisierungs-Scripts
 │   └── 01-create-app-user.sh
 └── backups/               # Backup-Verzeichnis
+
+Hinweis: PostgreSQL Daten werden in einem Docker Named Volume gespeichert.
 
 MANAGEMENT SCRIPT
 =================
