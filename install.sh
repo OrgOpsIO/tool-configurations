@@ -32,6 +32,10 @@ show_help() {
     echo -e "  twenty           - Installiert nur Twenty CRM"
     echo -e "  authentik        - Installiert nur Authentik (SSO/Identity Provider)"
     echo -e "  openwebui        - Installiert nur Open WebUI (AI Chat Interface)"
+    echo -e "  postgres <name> [--public]"
+    echo -e "                   - Installiert eine PostgreSQL-Instanz"
+    echo -e "                     Beispiel: $0 postgres kunde-a"
+    echo -e "                     Beispiel: $0 postgres dev-db --public"
     echo -e "  webapp <name>    - Installiert eine generische Web-App Deployment-Hülle"
     echo -e "                     Beispiel: $0 webapp shop"
     echo -e "  all              - Installiert alle Services (ohne Web-Apps)"
@@ -127,6 +131,13 @@ install_openwebui() {
     bash "${SCRIPT_DIR}/openwebui/openwebui-install.sh"
 }
 
+# Funktion zum Installieren von PostgreSQL Instanzen
+install_postgres() {
+    shift  # Entferne das erste Argument (postgres)
+    echo -e "${GREEN}Starte PostgreSQL Instanz Installation...${NC}"
+    bash "${SCRIPT_DIR}/postgres/postgres-install.sh" "$@"
+}
+
 # Funktion zum Installieren von Web-Apps
 install_webapp() {
     local app_name=$1
@@ -186,6 +197,9 @@ case "$1" in
         ;;
     openwebui)
         install_openwebui
+        ;;
+    postgres)
+        install_postgres "$@"
         ;;
     webapp)
         shift  # Entferne das erste Argument (webapp)
