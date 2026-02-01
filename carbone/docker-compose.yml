@@ -1,0 +1,40 @@
+services:
+  carbone:
+    image: carbone/carbone-ee:full
+    restart: always
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      - CARBONE_EE_LICENSE=${CARBONE_EE_LICENSE}
+      - CARBONE_EE_STUDIO=${CARBONE_EE_STUDIO}
+      - CARBONE_EE_AUTHENTICATION=${CARBONE_EE_AUTHENTICATION}
+      - CARBONE_EE_STUDIOUSER=${CARBONE_EE_STUDIOUSER}
+      - CARBONE_EE_PORT=4000
+      - CARBONE_EE_FACTORIES=${CARBONE_EE_FACTORIES}
+      - CARBONE_EE_TIMEZONE=${CARBONE_EE_TIMEZONE}
+      - CARBONE_EE_LANG=${CARBONE_EE_LANG}
+      - CARBONE_EE_ATTEMPTS=${CARBONE_EE_ATTEMPTS}
+      - CARBONE_EE_CONVERTERFACTORYTIMEOUT=${CARBONE_EE_CONVERTERFACTORYTIMEOUT}
+      - CARBONE_EE_MAXDATASIZE=${CARBONE_EE_MAXDATASIZE}
+      - CARBONE_EE_MAXTEMPLATESIZE=${CARBONE_EE_MAXTEMPLATESIZE}
+    volumes:
+      - carbone_templates:/app/template
+      - carbone_renders:/app/render
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - carbone_internal
+      - proxy_network
+
+volumes:
+  carbone_templates:
+  carbone_renders:
+
+networks:
+  carbone_internal:
+  proxy_network:
+    external: true

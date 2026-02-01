@@ -32,6 +32,8 @@ show_help() {
     echo -e "  twenty           - Installiert nur Twenty CRM"
     echo -e "  authentik        - Installiert nur Authentik (SSO/Identity Provider)"
     echo -e "  openwebui        - Installiert nur Open WebUI (AI Chat Interface)"
+    echo -e "  carbone          - Installiert nur Carbone (Document Generation)"
+    echo -e "  openclaw         - Installiert nur OpenClaw (AI Assistant Gateway)"
     echo -e "  postgres <name> [--public]"
     echo -e "                   - Installiert eine PostgreSQL-Instanz"
     echo -e "                     Beispiel: $0 postgres kunde-a"
@@ -131,6 +133,18 @@ install_openwebui() {
     bash "${SCRIPT_DIR}/openwebui/openwebui-install.sh"
 }
 
+# Funktion zum Installieren von Carbone
+install_carbone() {
+    echo -e "${GREEN}Starte Carbone Installation...${NC}"
+    bash "${SCRIPT_DIR}/carbone/carbone-install.sh"
+}
+
+# Funktion zum Installieren von OpenClaw
+install_openclaw() {
+    echo -e "${GREEN}Starte OpenClaw Installation...${NC}"
+    bash "${SCRIPT_DIR}/openclaw/openclaw-install.sh"
+}
+
 # Funktion zum Installieren von PostgreSQL Instanzen
 install_postgres() {
     shift  # Entferne das erste Argument (postgres)
@@ -198,6 +212,12 @@ case "$1" in
     openwebui)
         install_openwebui
         ;;
+    carbone)
+        install_carbone
+        ;;
+    openclaw)
+        install_openclaw
+        ;;
     postgres)
         install_postgres "$@"
         ;;
@@ -222,6 +242,8 @@ case "$1" in
         install_twenty
         install_authentik
         install_openwebui
+        install_carbone
+        install_openclaw
         ;;
     help|--help|-h)
         show_help
