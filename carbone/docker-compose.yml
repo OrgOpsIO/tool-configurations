@@ -17,6 +17,9 @@ services:
       - CARBONE_EE_CONVERTERFACTORYTIMEOUT=${CARBONE_EE_CONVERTERFACTORYTIMEOUT}
       - CARBONE_EE_MAXDATASIZE=${CARBONE_EE_MAXDATASIZE}
       - CARBONE_EE_MAXTEMPLATESIZE=${CARBONE_EE_MAXTEMPLATESIZE}
+    secrets:
+      - source: carbone-publickey
+        target: /app/config/key.pub
     volumes:
       - carbone_templates:/app/template
       - carbone_renders:/app/render
@@ -29,6 +32,10 @@ services:
     networks:
       - carbone_internal
       - proxy_network
+
+secrets:
+  carbone-publickey:
+    file: ./keys/key.pub
 
 volumes:
   carbone_templates:
