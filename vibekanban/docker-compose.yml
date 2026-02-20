@@ -113,18 +113,13 @@ services:
   app:
     image: node:20-alpine
     restart: unless-stopped
-    working_dir: /app
     depends_on:
       server:
         condition: service_healthy
     environment:
       VK_SHARED_API_BASE: https://${SUBDOMAIN}.${DOMAIN_NAME}
-      FRONTEND_PORT: "3000"
-    volumes:
-      - ./vibe-kanban:/app
-      - app-node-modules:/app/node_modules
     command: >
-      sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm run dev"
+      sh -c "npx vibe-kanban"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000"]
       interval: 10s
@@ -162,7 +157,6 @@ volumes:
   db-data:
   electric-data:
   azurite-data:
-  app-node-modules:
 
 networks:
   vibekanban_internal:
