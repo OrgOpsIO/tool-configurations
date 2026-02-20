@@ -38,6 +38,7 @@ cd "$TARGET_DIR" || exit 1
 if [ ! -f "docker-compose.yml" ]; then
     echo -e "${YELLOW}Kopiere docker-compose.yml nach $TARGET_DIR${NC}"
     cp "$SCRIPT_DIR/docker-compose.yml" .
+    cp "$SCRIPT_DIR/Dockerfile.app" .
 else
     echo -e "${YELLOW}docker-compose.yml existiert bereits in $TARGET_DIR${NC}"
 fi

@@ -111,25 +111,22 @@ services:
       - proxy_network
 
   app:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+      args:
+        VITE_VK_SHARED_API_BASE: https://${SUBDOMAIN}.${DOMAIN_NAME}
     restart: unless-stopped
     depends_on:
       server:
         condition: service_healthy
-    environment:
-      VK_SHARED_API_BASE: https://${SUBDOMAIN}.${DOMAIN_NAME}
-      PORT: "3000"
-      BROWSER: "none"
-    command: >
-      sh -c "npx vibe-kanban"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 60s
+      retries: 5
+      start_period: 10s
     networks:
-      - vibekanban_internal
       - proxy_network
 
   electric:
