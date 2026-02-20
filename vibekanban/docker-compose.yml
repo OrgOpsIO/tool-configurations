@@ -6,11 +6,11 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-vibekanban}
+      POSTGRES_DB: ${POSTGRES_DB:-remote}
       POSTGRES_USER: ${POSTGRES_USER:-vibekanban}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibekanban}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibekanban} -d ${POSTGRES_DB:-vibekanban}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibekanban} -d ${POSTGRES_DB:-remote}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -61,7 +61,7 @@ services:
         condition: service_completed_successfully
     environment:
       RUST_LOG: info,remote=info
-      SERVER_DATABASE_URL: postgres://${POSTGRES_USER:-vibekanban}:${POSTGRES_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-vibekanban}
+      SERVER_DATABASE_URL: postgres://${POSTGRES_USER:-vibekanban}:${POSTGRES_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-remote}
       SERVER_LISTEN_ADDR: 0.0.0.0:8081
       ELECTRIC_URL: http://electric:3000
       SERVER_PUBLIC_BASE_URL: https://${SUBDOMAIN}.${DOMAIN_NAME}
@@ -115,7 +115,7 @@ services:
     restart: on-failure
     working_dir: /app
     environment:
-      DATABASE_URL: postgresql://electric_sync:${ELECTRIC_ROLE_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-vibekanban}?sslmode=disable
+      DATABASE_URL: postgresql://electric_sync:${ELECTRIC_ROLE_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-remote}?sslmode=disable
       PG_PROXY_PORT: 65432
       LOGICAL_PUBLISHER_HOST: electric
       AUTH_MODE: insecure
