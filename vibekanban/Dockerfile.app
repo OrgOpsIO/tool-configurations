@@ -28,7 +28,7 @@ COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
 # SPA fallback - all routes to index.html
 RUN printf 'server {\n\
-    listen 3000;\n\
+    listen 8080;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
     location / {\n\
@@ -36,4 +36,4 @@ RUN printf 'server {\n\
     }\n\
 }\n' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 3000
+EXPOSE 8080
