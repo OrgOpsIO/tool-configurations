@@ -58,7 +58,7 @@ if [ ! -f ".env" ]; then
 
     # Generiere sicheres JWT Secret
     echo -e "${YELLOW}Generiere sicheres JWT Secret...${NC}"
-    JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+    JWT_SECRET=$(openssl rand -hex 32)
     sed -i "s|^VIBEKANBAN_REMOTE_JWT_SECRET=.*|VIBEKANBAN_REMOTE_JWT_SECRET=$JWT_SECRET|" .env
 
     # Generiere sicheres DB Passwort (nur alphanumerische Zeichen für URL-Kompatibilität)
