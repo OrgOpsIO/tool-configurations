@@ -118,6 +118,8 @@ services:
         condition: service_healthy
     environment:
       VK_SHARED_API_BASE: https://${SUBDOMAIN}.${DOMAIN_NAME}
+      PORT: "3000"
+      BROWSER: "none"
     command: >
       sh -c "npx vibe-kanban"
     healthcheck:
