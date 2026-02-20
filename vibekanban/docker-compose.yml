@@ -1,0 +1,144 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: always
+    command: ["postgres", "-c", "wal_level=logical"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vibekanban}
+      POSTGRES_USER: ${POSTGRES_USER:-vibekanban}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vibekanban}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibekanban} -d ${POSTGRES_DB:-vibekanban}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - vibekanban_internal
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    restart: always
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --loose --skipApiVersionCheck"
+    volumes:
+      - azurite-data:/data
+    healthcheck:
+      test: nc 127.0.0.1 10000 -z
+      interval: 1s
+      retries: 30
+    networks:
+      - vibekanban_internal
+
+  azurite-init:
+    image: mcr.microsoft.com/azure-cli:latest
+    depends_on:
+      azurite:
+        condition: service_healthy
+    environment:
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        az storage container create --name issue-attachments 2>/dev/null || true
+        az storage cors add --services b --methods GET PUT POST DELETE OPTIONS --origins '*' --allowed-headers '*' --exposed-headers '*' --max-age 3600
+        echo "Azurite CORS configured"
+    networks:
+      - vibekanban_internal
+
+  server:
+    build:
+      context: ./vibe-kanban
+      dockerfile: crates/remote/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      azurite-init:
+        condition: service_completed_successfully
+    environment:
+      RUST_LOG: info,remote=info
+      SERVER_DATABASE_URL: postgres://${POSTGRES_USER:-vibekanban}:${POSTGRES_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-vibekanban}
+      SERVER_LISTEN_ADDR: 0.0.0.0:8081
+      ELECTRIC_URL: http://electric:3000
+      SERVER_PUBLIC_BASE_URL: https://${SUBDOMAIN}.${DOMAIN_NAME}
+      VK_ALLOWED_ORIGINS: https://${SUBDOMAIN}.${DOMAIN_NAME}
+
+      # JWT Secret (required)
+      VIBEKANBAN_REMOTE_JWT_SECRET: ${VIBEKANBAN_REMOTE_JWT_SECRET:?set VIBEKANBAN_REMOTE_JWT_SECRET in .env}
+
+      # ElectricSQL role password
+      ELECTRIC_ROLE_PASSWORD: ${ELECTRIC_ROLE_PASSWORD:-vibekanban}
+
+      # OAuth — configure at least one provider (GitHub or Google)
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+
+      # Optional: Email invitations via Loops
+      LOOPS_EMAIL_API_KEY: ${LOOPS_EMAIL_API_KEY:-}
+
+      # Azurite blob storage (internal)
+      AZURE_STORAGE_ACCOUNT_NAME: devstoreaccount1
+      AZURE_STORAGE_ACCOUNT_KEY: "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+      AZURE_STORAGE_CONTAINER_NAME: issue-attachments
+      AZURE_STORAGE_ENDPOINT_URL: http://azurite:10000/devstoreaccount1
+      AZURE_STORAGE_PUBLIC_ENDPOINT_URL: ${AZURE_STORAGE_PUBLIC_ENDPOINT_URL:-https://${SUBDOMAIN}.${DOMAIN_NAME}/attachments}
+
+      # Optional: GitHub App Integration
+      # GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      # GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      # GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+      # GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+
+      # Optional: Stripe Billing
+      # STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      # STRIPE_TEAM_SEAT_PRICE_ID: ${STRIPE_TEAM_SEAT_PRICE_ID:-}
+      # STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # STRIPE_FREE_SEAT_LIMIT: ${STRIPE_FREE_SEAT_LIMIT:-1}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8081/v1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - vibekanban_internal
+      - proxy_network
+
+  electric:
+    image: electricsql/electric:1.3.3
+    restart: on-failure
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://electric_sync:${ELECTRIC_ROLE_PASSWORD:-vibekanban}@db:5432/${POSTGRES_DB:-vibekanban}?sslmode=disable
+      PG_PROXY_PORT: 65432
+      LOGICAL_PUBLISHER_HOST: electric
+      AUTH_MODE: insecure
+      ELECTRIC_INSECURE: "true"
+      ELECTRIC_MANUAL_TABLE_PUBLISHING: "true"
+      ELECTRIC_USAGE_REPORTING: "false"
+      ELECTRIC_FEATURE_FLAGS: allow_subqueries,tagged_subqueries
+    volumes:
+      - electric-data:/app/persistent
+    depends_on:
+      db:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    networks:
+      - vibekanban_internal
+
+volumes:
+  db-data:
+  electric-data:
+  azurite-data:
+
+networks:
+  vibekanban_internal:
+  proxy_network:
+    external: true

@@ -34,6 +34,7 @@ show_help() {
     echo -e "  openwebui        - Installiert nur Open WebUI (AI Chat Interface)"
     echo -e "  carbone          - Installiert nur Carbone (Document Generation)"
     echo -e "  openclaw         - Installiert nur OpenClaw (AI Assistant Gateway)"
+    echo -e "  vibekanban       - Installiert nur Vibe Kanban (AI Agent Orchestration)"
     echo -e "  postgres <name> [--public]"
     echo -e "                   - Installiert eine PostgreSQL-Instanz"
     echo -e "                     Beispiel: $0 postgres kunde-a"
@@ -145,6 +146,12 @@ install_openclaw() {
     bash "${SCRIPT_DIR}/openclaw/openclaw-install.sh"
 }
 
+# Funktion zum Installieren von Vibe Kanban
+install_vibekanban() {
+    echo -e "${GREEN}Starte Vibe Kanban Installation...${NC}"
+    bash "${SCRIPT_DIR}/vibekanban/vibekanban-install.sh"
+}
+
 # Funktion zum Installieren von PostgreSQL Instanzen
 install_postgres() {
     shift  # Entferne das erste Argument (postgres)
@@ -218,6 +225,9 @@ case "$1" in
     openclaw)
         install_openclaw
         ;;
+    vibekanban)
+        install_vibekanban
+        ;;
     postgres)
         install_postgres "$@"
         ;;
@@ -244,6 +254,7 @@ case "$1" in
         install_openwebui
         install_carbone
         install_openclaw
+        install_vibekanban
         ;;
     help|--help|-h)
         show_help
