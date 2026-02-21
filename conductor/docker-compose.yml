@@ -1,0 +1,39 @@
+services:
+  conductor:
+    build:
+      context: ${CONDUCTOR_SOURCE_PATH:-../../../conductor}
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      GITLAB_URL: ${GITLAB_URL}
+      GITLAB_TOKEN: ${GITLAB_TOKEN}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PROMPTS_DIR: /opt/conductor/prompts
+    volumes:
+      - data:/data
+      - ${CONDUCTOR_CONFIG_PATH:-./conductor.yml}:/etc/conductor/conductor.yml:ro
+      - repos:/repos
+    expose:
+      - "8080"
+    networks:
+      - conductor_internal
+      - proxy_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  data:
+    driver: local
+  repos:
+    driver: local
+
+networks:
+  conductor_internal:
+    driver: bridge
+  proxy_network:
+    external: true

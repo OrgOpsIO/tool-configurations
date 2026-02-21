@@ -16,7 +16,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 # Funktion zum Anzeigen der Hilfe
 show_help() {
     echo -e "${GREEN}OrgOps Installation Helper${NC}"
-    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|authentik|webapp|all]"
+    echo -e "Verwendung: $0 [npm|n8n|freescout|mattermost|ghost|nextcloud|minio|tiledesk|nocodb|keila|twenty|authentik|gitlab|conductor|webapp|all]"
     echo -e ""
     echo -e "Optionen:"
     echo -e "  npm              - Installiert nur Nginx Proxy Manager"
@@ -35,6 +35,8 @@ show_help() {
     echo -e "  carbone          - Installiert nur Carbone (Document Generation)"
     echo -e "  openclaw         - Installiert nur OpenClaw (AI Assistant Gateway)"
     echo -e "  vibekanban       - Installiert nur Vibe Kanban (AI Agent Orchestration)"
+    echo -e "  gitlab           - Installiert nur GitLab CE (Self-Hosted Git + CI/CD)"
+    echo -e "  conductor        - Installiert nur Conductor (AI Development Pipeline)"
     echo -e "  postgres <name> [--public]"
     echo -e "                   - Installiert eine PostgreSQL-Instanz"
     echo -e "                     Beispiel: $0 postgres kunde-a"
@@ -152,6 +154,18 @@ install_vibekanban() {
     bash "${SCRIPT_DIR}/vibekanban/vibekanban-install.sh"
 }
 
+# Funktion zum Installieren von GitLab CE
+install_gitlab() {
+    echo -e "${GREEN}Starte GitLab CE Installation...${NC}"
+    bash "${SCRIPT_DIR}/gitlab/gitlab-install.sh"
+}
+
+# Funktion zum Installieren von Conductor
+install_conductor() {
+    echo -e "${GREEN}Starte Conductor Installation...${NC}"
+    bash "${SCRIPT_DIR}/conductor/conductor-install.sh"
+}
+
 # Funktion zum Installieren von PostgreSQL Instanzen
 install_postgres() {
     shift  # Entferne das erste Argument (postgres)
@@ -228,6 +242,12 @@ case "$1" in
     vibekanban)
         install_vibekanban
         ;;
+    gitlab)
+        install_gitlab
+        ;;
+    conductor)
+        install_conductor
+        ;;
     postgres)
         install_postgres "$@"
         ;;
@@ -255,6 +275,8 @@ case "$1" in
         install_carbone
         install_openclaw
         install_vibekanban
+        install_gitlab
+        install_conductor
         ;;
     help|--help|-h)
         show_help
