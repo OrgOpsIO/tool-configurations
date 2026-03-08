@@ -42,10 +42,16 @@ else
     echo -e "${YELLOW}docker-compose.yml existiert bereits in $TARGET_DIR${NC}"
 fi
 
-# Überprüfen, ob die .env existiert, sonst example.env kopieren und Secrets generieren
+# Überprüfen, ob die .env existiert, sonst aus Quellverzeichnis kopieren
 if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Kopiere example.env nach $TARGET_DIR/.env${NC}"
-    cp "$SCRIPT_DIR/example.env" ./.env
+    if [ ! -f "$SCRIPT_DIR/.env" ]; then
+        echo -e "${RED}Keine .env im Quellverzeichnis gefunden!${NC}"
+        echo -e "${YELLOW}Bitte zuerst example.env nach .env kopieren und anpassen:${NC}"
+        echo -e "${YELLOW}  cp $SCRIPT_DIR/example.env $SCRIPT_DIR/.env${NC}"
+        exit 1
+    fi
+    echo -e "${YELLOW}Kopiere .env nach $TARGET_DIR/.env${NC}"
+    cp "$SCRIPT_DIR/.env" ./.env
 
     # Sichere Secrets automatisch generieren
     echo -e "${YELLOW}Generiere sichere Secrets...${NC}"
