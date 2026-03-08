@@ -37,6 +37,7 @@ show_help() {
     echo -e "  vibekanban       - Installiert nur Vibe Kanban (AI Agent Orchestration)"
     echo -e "  gitlab           - Installiert nur GitLab CE (Self-Hosted Git + CI/CD)"
     echo -e "  conductor        - Installiert nur Conductor (AI Development Pipeline)"
+    echo -e "  paperless-ngx    - Installiert nur Paperless-ngx (Document Management)"
     echo -e "  postgres <name> [--public]"
     echo -e "                   - Installiert eine PostgreSQL-Instanz"
     echo -e "                     Beispiel: $0 postgres kunde-a"
@@ -163,7 +164,24 @@ install_gitlab() {
 # Funktion zum Installieren von Conductor
 install_conductor() {
     echo -e "${GREEN}Starte Conductor Installation...${NC}"
-    bash "${SCRIPT_DIR}/conductor/conductor-install.sh"
+    # Bevorzugt tulpa-Repo, Fallback auf lokales conductor/
+    TULPA_INSTALL="${SCRIPT_DIR}/../tulpa/deploy/conductor/install.sh"
+    LOCAL_INSTALL="${SCRIPT_DIR}/conductor/conductor-install.sh"
+    if [ -f "$TULPA_INSTALL" ]; then
+        bash "$TULPA_INSTALL"
+    elif [ -f "$LOCAL_INSTALL" ]; then
+        bash "$LOCAL_INSTALL"
+    else
+        echo -e "${RED}Conductor Install-Skript nicht gefunden!${NC}"
+        echo -e "${YELLOW}Erwartet unter: ${TULPA_INSTALL}${NC}"
+        exit 1
+    fi
+}
+
+# Funktion zum Installieren von Paperless-ngx
+install_paperless_ngx() {
+    echo -e "${GREEN}Starte Paperless-ngx Installation...${NC}"
+    bash "${SCRIPT_DIR}/paperless-ngx/paperless-ngx-install.sh"
 }
 
 # Funktion zum Installieren von PostgreSQL Instanzen
@@ -248,6 +266,9 @@ case "$1" in
     conductor)
         install_conductor
         ;;
+    paperless-ngx)
+        install_paperless_ngx
+        ;;
     postgres)
         install_postgres "$@"
         ;;
@@ -277,6 +298,7 @@ case "$1" in
         install_vibekanban
         install_gitlab
         install_conductor
+        install_paperless_ngx
         ;;
     help|--help|-h)
         show_help
