@@ -1,0 +1,15 @@
+services:
+  snappymail:
+    image: djmaze/snappymail:latest
+    restart: always
+    volumes:
+      - snappymail_data:/var/lib/snappymail
+    networks:
+      - proxy_network
+
+volumes:
+  snappymail_data:
+
+networks:
+  proxy_network:
+    external: true

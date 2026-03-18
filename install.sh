@@ -38,6 +38,7 @@ show_help() {
     echo -e "  gitlab           - Installiert nur GitLab CE (Self-Hosted Git + CI/CD)"
     echo -e "  conductor        - Installiert nur Conductor (AI Development Pipeline)"
     echo -e "  paperless-ngx    - Installiert nur Paperless-ngx (Document Management)"
+  echo -e "  snappymail       - Installiert nur SnappyMail Webmail (Multi-Account)"
     echo -e "  postgres <name> [--public]"
     echo -e "                   - Installiert eine PostgreSQL-Instanz"
     echo -e "                     Beispiel: $0 postgres kunde-a"
@@ -184,6 +185,12 @@ install_paperless_ngx() {
     bash "${SCRIPT_DIR}/paperless-ngx/paperless-ngx-install.sh"
 }
 
+# Funktion zum Installieren von SnappyMail
+install_snappymail() {
+    echo -e "${GREEN}Starte SnappyMail Installation...${NC}"
+    bash "${SCRIPT_DIR}/snappymail/snappymail-install.sh"
+}
+
 # Funktion zum Installieren von PostgreSQL Instanzen
 install_postgres() {
     shift  # Entferne das erste Argument (postgres)
@@ -269,6 +276,9 @@ case "$1" in
     paperless-ngx)
         install_paperless_ngx
         ;;
+    snappymail)
+        install_snappymail
+        ;;
     postgres)
         install_postgres "$@"
         ;;
@@ -299,6 +309,7 @@ case "$1" in
         install_gitlab
         install_conductor
         install_paperless_ngx
+        install_snappymail
         ;;
     help|--help|-h)
         show_help
