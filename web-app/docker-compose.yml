@@ -1,3 +1,9 @@
+include:
+  # Optionale App-eigene Sidecar-Services (z.B. Redis, Worker).
+  # Wird ignoriert wenn die Datei nicht existiert (einfache Apps ohne Sidecars).
+  - path: ./app/docker-compose.services.yml
+    required: false
+
 services:
   web-app-{{APP_NAME}}:
     build:
@@ -13,7 +19,10 @@ services:
       - .env
     networks:
       - proxy_network
+      - app_internal
 
 networks:
   proxy_network:
     external: true
+  app_internal:
+    name: web-app-{{APP_NAME}}_internal
