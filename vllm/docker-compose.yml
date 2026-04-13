@@ -1,0 +1,60 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    command: >
+      --model ${VLLM_MODEL}
+      --device cpu
+      --dtype float32
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-2048}
+      --enforce-eager
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - vllm-models:/root/.cache/huggingface
+    expose:
+      - 8000
+    networks:
+      - llm_internal
+    shm_size: '2gb'
+    restart: unless-stopped
+    # GPU aktivieren: Zeilen unten einkommentieren, --device cpu und --dtype float32 aus command entfernen
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    restart: always
+    environment:
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY}
+      WEBUI_NAME: ${WEBUI_NAME:-Open WebUI}
+      # Mehrere Backends: lokales vLLM + optional RunPod (Semikolon-getrennt)
+      # RunPod wird automatisch aktiv sobald RUNPOD_API_KEY und RUNPOD_ENDPOINT_ID in .env gesetzt sind
+      OPENAI_API_BASE_URLS: "http://vllm:8000/v1;${RUNPOD_ENDPOINT_URL:-}"
+      OPENAI_API_KEYS: "${VLLM_API_KEY:-dummy};${RUNPOD_API_KEY:-}"
+      OLLAMA_BASE_URL: ""
+    volumes:
+      - openwebui-data:/app/backend/data
+    expose:
+      - 8080
+    networks:
+      - llm_internal
+      - proxy_network
+    depends_on:
+      - vllm
+
+networks:
+  llm_internal:
+    driver: bridge
+  proxy_network:
+    external: true
+
+volumes:
+  vllm-models:
+    driver: local
+  openwebui-data:
+    driver: local
